@@ -29,8 +29,8 @@ def prepare_dummy_walkmandir():
         os.mkdir(DEVICEDIR)
     touch(DEVICEDIR, 'capability_00.xml', body="foobar")
 
-def create_library():
-    with open(pjoin(TESTDIR, 'testlib.xml')) as f:
+def create_library(name):
+    with open(pjoin(TESTDIR, name)) as f:
         rawstr = f.read()
         body = rawstr.format(TUNESDIR=TUNESDIR)
         return io.BytesIO(body.encode('utf-8'))
@@ -48,7 +48,7 @@ def remove_test_files():
 
 class TestLibrary:
     def test_lib(self):
-        lib = isync.Library(create_library())
+        lib = isync.Library(create_library('testlib.xml'))
         pl = lib.playlist_by_name('A Playlist')
         assert_equals(pl.name, "A Playlist")
         assert_equals(1, len(pl.tracks))
@@ -78,7 +78,7 @@ class TestLibrarySyncer:
         remove_test_files()
 
     def test_sync(self):
-        lib = isync.Library(create_library())
+        lib = isync.Library(create_library('testlib.xml'))
         dev = isync.Walkman(DEVICEDIR)
         cfg = DummyPlaylists()
         syncer = isync.LibrarySyncer(lib, cfg, dev)
@@ -86,6 +86,16 @@ class TestLibrarySyncer:
         assert_file_exists(DEVICEDIR, 'A Playlist', '0 TuneDelta.mp3')
 
     def test_update(self):
-        pass
-
+        lib1 = isync.Library(create_library('testlib.xml'))
+        dev1 = isync.Walkman(DEVICEDIR)
+        cfg1 = DummyPlaylists()
+        syncer1 = isync.LibrarySyncer(lib1, cfg1, dev1)
+        syncer1.sync()
+        lib2 = isync.Library(create_library('testlib2.xml'))
+        dev2 = isync.Walkman(DEVICEDIR)
+        cfg2 = DummyPlaylists()
+        syncer2 = isync.LibrarySyncer(lib2, cfg2, dev2)
+        syncer2.sync()
+        assert_file_exists(DEVICEDIR, 'A Playlist', '0 TuneAlpha.mp3')
+        assert_file_exists(DEVICEDIR, 'A Playlist', '1 TuneDelta.mp3')
 

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Major Version</key><integer>1</integer>
+	<key>Minor Version</key><integer>1</integer>
+	<key>Date</key><date>2012-11-30T22:25:16Z</date>
+	<key>Application Version</key><string>10.7</string>
+	<key>Features</key><integer>5</integer>
+	<key>Show Content Ratings</key><true/>
+    <key>Music Folder</key><string>file://{TUNESDIR}</string>
+	<key>Library Persistent ID</key><string>1DAE18CCB7C7A897</string>
+	<key>Tracks</key>
+	<dict>
+		<key>1368</key>
+		<dict>
+			<key>Track ID</key><integer>1368</integer>
+			<key>Name</key><string>TuneAlpha</string>
+			<key>Artist</key><string>ArtistBravo</string>
+			<key>Album Artist</key><string>AlbumArtistBravo</string>
+			<key>Album</key><string>ArtistOne</string>
+			<key>Genre</key><string>Rock</string>
+			<key>Kind</key><string>MPEG オーディオファイル</string>
+			<key>Size</key><integer>1</integer>
+			<key>Total Time</key><integer>282070</integer>
+			<key>Track Number</key><integer>1</integer>
+			<key>Year</key><integer>2007</integer>
+			<key>Date Modified</key><date>2010-12-12T12:23:34Z</date>
+			<key>Date Added</key><date>2010-03-27T06:35:21Z</date>
+			<key>Bit Rate</key><integer>192</integer>
+			<key>Sample Rate</key><integer>44100</integer>
+			<key>Play Count</key><integer>58</integer>
+			<key>Play Date</key><integer>3421543533</integer>
+			<key>Play Date UTC</key><date>2012-06-02T19:45:33Z</date>
+			<key>Skip Count</key><integer>15</integer>
+			<key>Skip Date</key><date>2011-03-06T15:02:00Z</date>
+			<key>Artwork Count</key><integer>1</integer>
+			<key>Persistent ID</key><string>4B219062E3005032</string>
+			<key>Track Type</key><string>File</string>
+            <key>Location</key><string>file://{TUNESDIR}/TuneAlpha.mp3</string>
+			<key>File Folder Count</key><integer>5</integer>
+			<key>Library Folder Count</key><integer>1</integer>
+		</dict>
+		<key>1370</key>
+		<dict>
+			<key>Track ID</key><integer>1370</integer>
+			<key>Name</key><string>TuneDelta</string>
+			<key>Artist</key><string>ArtistEcho</string>
+			<key>Album Artist</key><string>AlbumArtistFoxtort</string>
+			<key>Album</key><string>AlbumGolf</string>
+			<key>Genre</key><string>Jazz</string>
+			<key>Kind</key><string>MPEG オーディオファイル</string>
+			<key>Size</key><integer>6029848</integer>
+			<key>Total Time</key><integer>247379</integer>
+			<key>Track Number</key><integer>2</integer>
+			<key>Year</key><integer>2007</integer>
+			<key>Date Modified</key><date>2010-12-12T12:23:34Z</date>
+			<key>Date Added</key><date>2010-03-27T06:35:21Z</date>
+			<key>Bit Rate</key><integer>192</integer>
+			<key>Sample Rate</key><integer>44100</integer>
+			<key>Artwork Count</key><integer>1</integer>
+			<key>Persistent ID</key><string>9324409B32E3FE15</string>
+			<key>Track Type</key><string>File</string>
+            <key>Location</key><string>file://{TUNESDIR}/TuneBravo.mp3</string>
+			<key>File Folder Count</key><integer>5</integer>
+			<key>Library Folder Count</key><integer>1</integer>
+		</dict>
+	</dict>
+	<key>Playlists</key>
+	<array>
+		<dict>
+			<key>Name</key><string>ライブラリ</string>
+			<key>Master</key><true/>
+			<key>Playlist ID</key><integer>9212</integer>
+			<key>Playlist Persistent ID</key><string>FB7738305FBEDA20</string>
+			<key>Visible</key><false/>
+			<key>All Items</key><true/>
+			<key>Playlist Items</key>
+			<array>
+				<dict>
+					<key>Track ID</key><integer>1368</integer>
+				</dict>
+				<dict>
+					<key>Track ID</key><integer>1370</integer>
+				</dict>
+            </array>
+        </dict>
+		<dict>
+			<key>Name</key><string>A Playlist</string>
+			<key>Playlist ID</key><integer>17331</integer>
+			<key>Playlist Persistent ID</key><string>2D0D0E2DBECA56AA</string>
+			<key>All Items</key><true/>
+			<key>Playlist Items</key>
+			<array>
+				<dict>
+					<key>Track ID</key><integer>1368</integer>
+				</dict>
+				<dict>
+					<key>Track ID</key><integer>1370</integer>
+				</dict>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
