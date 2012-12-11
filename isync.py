@@ -85,17 +85,20 @@ class Config:
 
     def __getattr__(self, key):
         return self._dic[key]
+
+    def _inject_libaray(self, library):
+            self._dic['library_path'] = library.path
+            self._dic['target_playlists'] = dict((pl, False) for pl in library.playlists)
     
     @staticmethod
     def prepare_default(library=None):
         dic = {
-            'librar_path' : "<Path to iTunes Libaray.xml>",
+            'library_path' : "<Path to iTunes Libaray.xml>",
             'target_playlists' : { '<Playlist Name>' : False },
             }
-        if library is not None:
-            dic['library_path'] = library.path
-            dic['target_playlists'] = dict((pl, False) for pl in library.playlists)
         cfg = Config(dic)
+        if library is not None:
+            cfg._inject_libaray(library)
         cfg.save()
         return cfg
 
