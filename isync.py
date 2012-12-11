@@ -6,6 +6,8 @@ DEFAULT_CONFIGS = {
         'add_sequence_number' : True,
     }
 
+SYSTEM_PLAYLISTS = set([ 'Libaray', 'ライブラリ' ])
+
 import plistlib
 import sys
 import os
@@ -301,7 +303,7 @@ class Playlist(NameAccessMixin, dict):
     # For example: Musics, Videos, Podcasts, iTunes DJ, Genius, etc... 
     @property
     def is_system(self):
-        return 'Distinguished Kind' in self
+        return 'Distinguished Kind' in self or self.name in SYSTEM_PLAYLISTS
 # }}}
 # --------------------------------
 
