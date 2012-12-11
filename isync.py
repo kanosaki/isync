@@ -51,8 +51,9 @@ class Main:
     def config(self):
         info("Reading configurations...")
         try:
-            return Config()
-        except Exception:
+            return Config.load()
+        except Exception as e:
+            warn(e)
             warn("Unable to read configuration, creating new one.")
             return Config.prepare_default()
     
@@ -78,15 +79,39 @@ class Main:
 
 
 class Config:
-    def is_update(self):
-        """Retain files in device which are removed from Playlists"""
+    def __init__(self, dic, path=DEFAULT_CONFIG_FILENAME):
+        self._dic = dic
+        self._path = path
 
-    def is_force(self):
-        """Delete all files in device, and copy all files entirely"""
+    def __getattr__(self, key):
+        return self._dic[key]
     
     @staticmethod
-    def prepare_default():
-        pass
+    def prepare_default(library=None):
+        dic = {
+            'librar_path' : "<Path to iTunes Libaray.xml>",
+            'target_playlists' : { '<Playlist Name>' : False },
+            }
+        if library is not None:
+            dic['library_path'] = library.path
+            dic['target_playlists'] = dict((pl, False) for pl in library.playlists)
+        cfg = Config(dic)
+        cfg.save()
+        return cfg
+
+    def __str__(self):
+        return 'Config({})'.format(str(self._dic))
+
+    def save(self, path=None):
+        path = path or self._path
+        with open(path, 'w') as f:
+            json.dump(self._dic, path)
+
+    @staticmethod
+    def load(path=DEFAULT_CONFIG_FILENAME):
+        with open(path) as f:
+            dic = json.load(f)
+            return Config(dic, path)
 
 
 # --------------------------------
@@ -167,6 +192,24 @@ class Library:
         self.lib = plistlib.readPlist(self.file)
         self._create_playlistmap()
         self._track_factory = self._create_track_factory(env)
+
+    def _get_path(self):
+        try:
+            return self._path
+        except AttributeError:
+            self._path = self._try_get_path()
+            return self._path
+    
+    def _try_get_path(self):
+        if os.path.exists(self.file):
+            return self.file
+        else:
+            raise Exception('This library created by stream')
+
+    def _set_path(self, val):
+        self._path = val
+
+    path = property(fget=_get_path, fset=_set_path)
 
     def track(self, track_id):
         return self.tracks[str(track_id)]
