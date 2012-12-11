@@ -21,6 +21,9 @@ import math
 import json
 from logging import error, warn, info
 
+if sys.version < '3.3':
+    raise 'Python 3.3 or above required.'
+
 FILEDIR = os.path.abspath(os.path.dirname(__file__))
 
 # --------------------------------
