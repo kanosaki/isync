@@ -20,6 +20,7 @@ import logging
 import math
 import json
 from logging import error, warn, info
+from optparse import OptionParser
 
 if sys.version < '3.3':
     raise 'Python 3.3 or above required.'
@@ -32,6 +33,7 @@ FILEDIR = os.path.abspath(os.path.dirname(__file__))
 class Main:
     def __init__(self):
         self._init_logger()
+        self.args = CommandArguments()
 
     def start(self):
         self.sync()
@@ -44,18 +46,19 @@ class Main:
         syncer.start()
 
     @property
-    def environment(self):
+    def env(self):
         return EnvironmentBuilder.create()
 
     @property
     def config(self):
         info("Reading configurations...")
         try:
-            return Config.load()
+            path = self.args.config
+            return Config.load(path)
         except Exception as e:
             warn(e)
             warn("Unable to read configuration, creating new one.")
-            return Config.prepare_default()
+            return Config.prepare_default(self.library)
     
     @property
     def device(self):
@@ -71,12 +74,22 @@ class Main:
     def library(self):
         try:
             return Library(self.env.itunes_libfile())
-        except Exception:
+        except Exception as e:
+            error(e)
             abort("No iTunes library found.")
 
     def _init_logger(self):
         logging.basicConfig(level=logging.DEBUG)
 
+class CommandArguments:
+    def __init__(self):
+        parser = OptionParser()
+        parser.add_option('-c', '--config', action='store', type='string', dest='config')
+        self._opts, _ = parser.parse_args()
+
+    def __getattr__(self, key):
+        return getattr(self._opts, key)
+    
 
 class Config:
     def __init__(self, dic, path=DEFAULT_CONFIG_FILENAME):
@@ -88,13 +101,18 @@ class Config:
 
     def _inject_libaray(self, library):
             self._dic['library_path'] = library.path
-            self._dic['target_playlists'] = dict((pl, False) for pl in library.playlists)
+            self._dic['target_playlists'] = dict(
+                    (pl.name, False) 
+                    for pl in library.playlists 
+                    if not pl.is_system)
     
     @staticmethod
     def prepare_default(library=None):
         dic = {
             'library_path' : "<Path to iTunes Libaray.xml>",
             'target_playlists' : { '<Playlist Name>' : False },
+            'force_update' : False,
+            'keep_removed_files' : False,
             }
         cfg = Config(dic)
         if library is not None:
@@ -108,10 +126,11 @@ class Config:
     def save(self, path=None):
         path = path or self._path
         with open(path, 'w') as f:
-            json.dump(self._dic, path)
+            json.dump(self._dic, f, indent=4)
 
     @staticmethod
-    def load(path=DEFAULT_CONFIG_FILENAME):
+    def load(path=None):
+        path = path or DEFAULT_CONFIG_FILENAME
         with open(path) as f:
             dic = json.load(f)
             return Config(dic, path)
