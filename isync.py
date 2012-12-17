@@ -1,10 +1,9 @@
+# -*- coding: utf-8 -*-
+
+# iSync: Walkman等のデバイスと、iTunesのプレイリストを同期します
+
 # Configs
 DEFAULT_CONFIG_FILENAME = 'iSyncConfig.json'
-DEFAULT_CONFIGS = {
-        'sync_playlists' : [  ],
-        'sync_unchecked_tune' : False,
-        'add_sequence_number' : True,
-    }
 
 SYSTEM_PLAYLISTS = set([ 'Libaray', 'ライブラリ' ])
 
@@ -40,11 +39,18 @@ class Main:
     def start(self):
         self.sync()
 
+    def create_syncer(self):
+        if self.config.is_dry:
+            return DryLibrarySyncer
+        else:
+            return LibrarySyncer
+
     def sync(self):
-        syncer = LibrarySyncer(
-                self.library(),
-                self.config(),
-                self.device())
+        syncerClass = self.create_syncer()
+        syncer = syncerClass(
+                self.library,
+                self.config,
+                self.device)
         syncer.start()
 
     @property
@@ -53,10 +59,17 @@ class Main:
 
     @property
     def config(self):
+        try:
+            return self._config
+        except AttributeError:
+            self._config = self.load_config()
+            return self._config
+
+    def load_config(self):
         info("Reading configurations...")
         try:
             path = self.args.config
-            return Config.load(path)
+            return Config.load(self.args, path)
         except Exception as e:
             warn(e)
             warn("Unable to read configuration, creating new one.")
@@ -87,16 +100,22 @@ class CommandArguments:
     def __init__(self):
         parser = OptionParser()
         parser.add_option('-c', '--config', action='store', type='string', dest='config')
+        parser.add_option('-d', '--dry', action='store_true', dest='dry')
         self._opts, _ = parser.parse_args()
 
     def __getattr__(self, key):
         return getattr(self._opts, key)
+
+class VoidObject:
+    def __getattr__(self, key):
+        return None
     
 
 class Config:
-    def __init__(self, dic, path=DEFAULT_CONFIG_FILENAME):
+    def __init__(self, dic, args, path=DEFAULT_CONFIG_FILENAME):
         self._dic = dic
         self._path = path
+        self._args = args
 
     def __getattr__(self, key):
         return self._dic[key]
@@ -107,6 +126,10 @@ class Config:
                     (pl.name, False) 
                     for pl in library.playlists 
                     if not pl.is_system)
+
+    @property
+    def is_dry(self):
+        return self._args.dry
     
     @staticmethod
     def prepare_default(library=None):
@@ -116,7 +139,7 @@ class Config:
             'force_update' : False,
             'keep_removed_files' : False,
             }
-        cfg = Config(dic)
+        cfg = Config(dic, VoidObject())
         if library is not None:
             cfg._inject_libaray(library)
         cfg.save()
@@ -131,11 +154,12 @@ class Config:
             json.dump(self._dic, f, indent=4)
 
     @staticmethod
-    def load(path=None):
+    def load(args=None, path=None):
         path = path or DEFAULT_CONFIG_FILENAME
+        args = args or CommandArguments()
         with open(path) as f:
             dic = json.load(f)
-            return Config(dic, path)
+            return Config(dic, args, path)
 
 
 # --------------------------------
@@ -543,6 +567,11 @@ class LibrarySyncer:
                 yield self.library.playlist_by_name(pname)
             except KeyError:
                 warn("Playlist {} was not found in library".format(pname))
+
+class DryLibrarySyncer(LibrarySyncer):
+    def targetdir(self, playlist):
+        dirpath = self.device.playlist_dirpath(playlist)
+        return DrySyncDirectory(dirpath, len(playlist.tracks))
 
 
 class PlaylistSyncer:
