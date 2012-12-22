@@ -82,6 +82,13 @@ class Main:
     
     @property
     def device(self):
+        try:
+            return self._device
+        except AttributeError:
+            self._device = self.find_device()
+            return self._device
+
+    def find_device(self):
         info("Searching device...")
         devices = list(DeviceLocator(self.env).find_all())
         if len(devices) < 1:
@@ -92,6 +99,13 @@ class Main:
 
     @property
     def library(self):
+        try:
+            return self._library
+        except AttributeError:
+            self._library = self.find_library()
+            return self._library
+
+    def find_library(self):
         try:
             return Library(self.env.itunes_libfile())
         except Exception as e:
