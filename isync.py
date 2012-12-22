@@ -38,6 +38,9 @@ class Main:
 
     def start(self):
         self.sync()
+        if self.env.is_win:
+            input()
+      
 
     def create_syncer(self):
         if self.config.is_dry:
@@ -351,6 +354,8 @@ class EnvironmentBuilder:
 
 
 class Environment:
+    is_win = False
+    is_mac = False
     def homedir(self):
         return os.environ['HOME']
 
@@ -369,11 +374,13 @@ class Environment:
 
 
 class MacOSX(Environment):
+    is_mac = True
     def devicedirs(self):
         return glob.glob("/Volumes/*")
 
 
 class Windows(Environment):
+    is_win = True
     def homedir(self):
         return os.environ['HOMEPATH']
 
