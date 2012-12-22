@@ -20,6 +20,8 @@ import string
 import logging
 import math
 import json
+import concurrent.futures
+import queue
 from logging import error, warn, info
 from optparse import OptionParser
 
@@ -229,6 +231,33 @@ class FilenameFixer:
         return filter(lambda c : c in ValidFilePathChars, name)
 
 FilenameFixer.instance = FilenameFixer()
+
+def voidfn(*args, **kw):
+    pass
+
+class SwitchFn:
+    def __init__(self, mainfn, altfn=voidfn):
+        self.mainfn = mainfn
+        self.is_altered = False
+        self.altfn = altfn
+
+    def switch(self):
+        self.is_altered = not self.is_altered
+
+    def use_altfn(self):
+        self.is_altered = True
+
+    def use_mainfn(self):
+        self.is_altered = False
+
+    def __set__(self, value):
+        self.is_altered = value
+
+    def __call__(self, *args, **kw):
+        if self.is_altered:
+            self.mainfn(*args, **kw)
+        else:
+            self.altfn(*args, **kw)
 
 # }}}
 # --------------------------------
@@ -597,6 +626,44 @@ class PlaylistSyncer:
 # }}}
 # --------------------------------
 
+# --------------------------------
+#  Workers {{{
+# --------------------------------
+
+class Action:
+    is_atomic = False
+    is_dry = False
+    def start(self, *args, dry=False, **kw):
+        if self.is_dry or dry:
+            self.dryrun(*args, **kw)
+        else:
+            self.run(*args, **kw)
+    __call__ = start
+
+
+class FileCopyAction(Action):
+    def __init__(self, src, dst):
+        self.src = src
+        self.dst = dst
+
+    def run(self):
+        shutil.copy(self.src, self.dst)
+
+    def dryrun(self, print_into=True):
+        if print_into:
+            info("COPY {1} -> {2}".format(self.src, self.dst))
+
+class Executor:
+    def __init__(self):
+        self._executor = concurrent.futures.ThreadPoolExecutor()
+        self._history = queue.deque()
+
+    def submit(self, f, *args, **kw):
+        self._executor.submit(f, *args, **kw)
+
+
+# }}}
+# --------------------------------
 if __name__ == '__main__':
     m = Main()
     m.start()

@@ -99,3 +99,7 @@ class TestLibrarySyncer:
         assert_file_exists(DEVICEDIR, 'A Playlist', '0 TuneAlpha.mp3')
         assert_file_exists(DEVICEDIR, 'A Playlist', '1 TuneDelta.mp3')
 
+
+class TestAlterableFn:
+    pass
+
