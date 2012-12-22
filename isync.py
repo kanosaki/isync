@@ -30,6 +30,19 @@ if sys.version < '3.3':
 
 FILEDIR = os.path.abspath(os.path.dirname(__file__))
 
+def cached_property(f):
+    def get(self):
+        try:
+            return self._property_cache[f]
+        except AttributeError:
+            self._property_cache = {}
+            x = self._property_cache[f] = f(self)
+            return x
+        except KeyError:
+            x = self._property_cache[f] = f(self)
+            return x
+    return property(get)
+
 # --------------------------------
 #  Main class
 # --------------------------------
@@ -43,7 +56,6 @@ class Main:
         if self.env.is_win:
             input()
       
-
     def create_syncer(self):
         if self.config.is_dry:
             return DryLibrarySyncer
@@ -61,16 +73,9 @@ class Main:
     @property
     def env(self):
         return EnvironmentBuilder.create()
-
-    @property
+    
+    @cached_property
     def config(self):
-        try:
-            return self._config
-        except AttributeError:
-            self._config = self.load_config()
-            return self._config
-
-    def load_config(self):
         info("Reading configurations...")
         try:
             path = self.args.config
@@ -80,15 +85,8 @@ class Main:
             warn("Unable to read configuration, creating new one.")
             return Config.prepare_default(self.library)
     
-    @property
+    @cached_property
     def device(self):
-        try:
-            return self._device
-        except AttributeError:
-            self._device = self.find_device()
-            return self._device
-
-    def find_device(self):
         info("Searching device...")
         devices = list(DeviceLocator(self.env).find_all())
         if len(devices) < 1:
@@ -97,15 +95,8 @@ class Main:
             warn("Multi suitable devices found. I will use {0} for syncing.".format(devices[0]))
         return devices[0]
 
-    @property
+    @cached_property
     def library(self):
-        try:
-            return self._library
-        except AttributeError:
-            self._library = self.find_library()
-            return self._library
-
-    def find_library(self):
         try:
             return Library(self.env.itunes_libfile())
         except Exception as e:
@@ -188,19 +179,6 @@ class Config:
 def abort(*args):
     print(*args, file=sys.stderr)
     sys.exit(-1)
-
-def cached_property(f):
-    def get(self):
-        try:
-            return self._property_cache[f]
-        except AttributeError:
-            self._property_cache = {}
-            x = self._property_cache[f] = f(self)
-            return x
-        except KeyError:
-            x = self._property_cache[f] = f(self)
-            return x
-    return property(get)
 
 
 class ItemWrapperMixin:
