@@ -100,6 +100,21 @@ class TestLibrarySyncer:
         assert_file_exists(DEVICEDIR, 'A Playlist', '1 TuneDelta.mp3')
 
 
-class TestAlterableFn:
+class DummyWorker(isync.Worker):
+    def create_child(self):
+        return DummyChildWorker()
+
+class DummyChildWorker(isync.Worker):
     pass
+
+class TestWorker:
+    def test_create(self):
+        worker = isync.Worker()
+        assert_equals(isync.ExecutorService.root.default, worker._executor)
+
+    def test_inherit(self):
+        parent_worker = DummyWorker()
+        child_worker = parent_worker.create_child()
+        assert_equals(isync.ExecutorService.root.default, parent_worker._executor)
+        assert_equals(child_worker._executor, parent_worker._executor)
 

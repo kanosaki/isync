@@ -22,6 +22,7 @@ import math
 import json
 import concurrent.futures
 import queue
+import inspect
 from logging import error, warn, info
 from optparse import OptionParser
 
@@ -176,10 +177,15 @@ class Config:
 #  Utilities {{{
 # --------------------------------
 
+def id_fn(x):
+    return x
+
+def void_fn(*args, **kw):
+    pass
+
 def abort(*args):
     print(*args, file=sys.stderr)
     sys.exit(-1)
-
 
 class ItemWrapperMixin:
     def __init__(self, wrapper, items=None):
@@ -224,11 +230,8 @@ class FilenameFixer:
 
 FilenameFixer.instance = FilenameFixer()
 
-def voidfn(*args, **kw):
-    pass
-
 class SwitchFn:
-    def __init__(self, mainfn, altfn=voidfn):
+    def __init__(self, mainfn, altfn=void_fn):
         self.mainfn = mainfn
         self.is_altered = False
         self.altfn = altfn
@@ -619,8 +622,42 @@ class PlaylistSyncer:
 # --------------------------------
 
 # --------------------------------
-#  Workers {{{
+#  Actions {{{
 # --------------------------------
+class Executor:
+    def __init__(self):
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        self._history = queue.deque()
+
+    def submit(self, f, *args, **kw):
+        self._executor.submit(f, *args, **kw)
+
+class DryExecutor(Executor):
+    def submit(self, f, *args, **kw):
+        self._executor.submit(f.dryrun, *args, **kw)
+
+class ExecutorService(dict):
+    DEFAULT_KEY = '_default'
+    def __init__(self, klass=Executor):
+        self.default_name = self.DEFAULT_KEY
+        self[self.default_name] = klass()
+
+    @property
+    def default(self):
+        return self[self.default_name]
+
+ExecutorService.root = ExecutorService()
+
+class Worker:
+    def __new__(cls, *args, **kw):
+        newobj = super().__new__(cls, *args, **kw)
+        try:
+            callerobj = inspect.stack()[0][0]['self']
+            if hasattr(callerobj, '_executor'):
+                newobj._executor = callerobj._executor
+        except (KeyError, IndexError, TypeError):
+            newobj._executor = ExecutorService.root.default
+        return newobj
 
 class Action:
     is_atomic = False
@@ -643,15 +680,11 @@ class FileCopyAction(Action):
 
     def dryrun(self, print_into=True):
         if print_into:
-            info("COPY {1} -> {2}".format(self.src, self.dst))
+            info(str(self))
 
-class Executor:
-    def __init__(self):
-        self._executor = concurrent.futures.ThreadPoolExecutor()
-        self._history = queue.deque()
+    def __str__(self):
+        return "COPY {1} -> {2}".format(self.src, self.dst)
 
-    def submit(self, f, *args, **kw):
-        self._executor.submit(f, *args, **kw)
 
 
 # }}}
