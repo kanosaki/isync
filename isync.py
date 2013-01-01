@@ -258,6 +258,82 @@ class SwitchFn:
 # --------------------------------
 
 # --------------------------------
+#  Actions {{{
+# --------------------------------
+class Executor:
+    def __init__(self):
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        self._history = queue.deque()
+
+    def submit(self, f, *args, **kw):
+        self._executor.submit(f, *args, **kw)
+
+class DryExecutor(Executor):
+    def submit(self, f, *args, **kw):
+        self._executor.submit(f.dryrun, *args, **kw)
+
+class ExecutorService(dict):
+    DEFAULT_KEY = '_default'
+    def __init__(self, klass=Executor):
+        self.default_name = self.DEFAULT_KEY
+        self[self.default_name] = klass()
+
+    def _get_default(self):
+        return self[self.default_name]
+
+    def _set_default(self, val):
+        self[self.default_name] = val
+
+    default = property(_get_default, _set_default)
+
+
+ExecutorService.root = ExecutorService()
+
+class WorkerMixin:
+    def __new__(cls, *args, **kw):
+        newobj = super().__new__(cls)
+        try:
+            callerobj = inspect.stack()[1][0].f_locals['self']
+            newobj._executor = callerobj._executor
+        except (KeyError, IndexError, TypeError, AttributeError) as e:
+            newobj._executor = ExecutorService.root.default
+        return newobj
+
+    def submit(self, acton, *args, **kw):
+        self._executor.submit(action, *args, **kw)
+
+class Action:
+    is_atomic = False
+    is_dry = False
+    def start(self, *args, dry=False, **kw):
+        if self.is_dry or dry:
+            self.dryrun(*args, **kw)
+        else:
+            self.run(*args, **kw)
+    __call__ = start
+
+
+class FileCopyAction(Action):
+    def __init__(self, src, dst):
+        self.src = src
+        self.dst = dst
+
+    def run(self):
+        shutil.copy(self.src, self.dst)
+
+    def dryrun(self, print_into=True):
+        if print_into:
+            info(str(self))
+
+    def __str__(self):
+        return "COPY {1} -> {2}".format(self.src, self.dst)
+
+
+
+# }}}
+# --------------------------------
+
+# --------------------------------
 #  Library handlers {{{
 # --------------------------------
 
@@ -485,7 +561,7 @@ class DeviceLocator:
             yield from self.suitables(dev_dir)
 
 
-class ActualFile:
+class ActualFile(WorkerMixin):
     def __init__(self, path):
         """path: indexed file path"""
         self.path = path
@@ -511,7 +587,7 @@ class DryActualFile(ActualFile):
         info("DRY: copy {} {}".format(track.path, self.path))
 
 
-class SyncDirectory:
+class SyncDirectory(WorkerMixin):
     RE_PAT = re.compile(r'\d+\s(.+)')
     def __init__(self, path, expected_files_count, force_write=False, dryrun=False):
         self.path = path
@@ -576,7 +652,7 @@ class DrySyncDirectory(SyncDirectory):
         return DryActualFile(path)
 
 
-class LibrarySyncer:
+class LibrarySyncer(WorkerMixin):
     def __init__(self, library, config, device):
         self.library = library
         self.config = config
@@ -605,7 +681,7 @@ class DryLibrarySyncer(LibrarySyncer):
         return DrySyncDirectory(dirpath, len(playlist.tracks))
 
 
-class PlaylistSyncer:
+class PlaylistSyncer(WorkerMixin):
     def __init__(self, playlist, dst_dir):
         """playlist: Playlist, dst_dir: SyncDirectory"""
         self.playlist = playlist
@@ -621,74 +697,6 @@ class PlaylistSyncer:
 # }}}
 # --------------------------------
 
-# --------------------------------
-#  Actions {{{
-# --------------------------------
-class Executor:
-    def __init__(self):
-        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-        self._history = queue.deque()
-
-    def submit(self, f, *args, **kw):
-        self._executor.submit(f, *args, **kw)
-
-class DryExecutor(Executor):
-    def submit(self, f, *args, **kw):
-        self._executor.submit(f.dryrun, *args, **kw)
-
-class ExecutorService(dict):
-    DEFAULT_KEY = '_default'
-    def __init__(self, klass=Executor):
-        self.default_name = self.DEFAULT_KEY
-        self[self.default_name] = klass()
-
-    @property
-    def default(self):
-        return self[self.default_name]
-
-ExecutorService.root = ExecutorService()
-
-class Worker:
-    def __new__(cls, *args, **kw):
-        newobj = super().__new__(cls, *args, **kw)
-        try:
-            callerobj = inspect.stack()[0][0]['self']
-            if hasattr(callerobj, '_executor'):
-                newobj._executor = callerobj._executor
-        except (KeyError, IndexError, TypeError):
-            newobj._executor = ExecutorService.root.default
-        return newobj
-
-class Action:
-    is_atomic = False
-    is_dry = False
-    def start(self, *args, dry=False, **kw):
-        if self.is_dry or dry:
-            self.dryrun(*args, **kw)
-        else:
-            self.run(*args, **kw)
-    __call__ = start
-
-
-class FileCopyAction(Action):
-    def __init__(self, src, dst):
-        self.src = src
-        self.dst = dst
-
-    def run(self):
-        shutil.copy(self.src, self.dst)
-
-    def dryrun(self, print_into=True):
-        if print_into:
-            info(str(self))
-
-    def __str__(self):
-        return "COPY {1} -> {2}".format(self.src, self.dst)
-
-
-
-# }}}
-# --------------------------------
 if __name__ == '__main__':
     m = Main()
     m.start()

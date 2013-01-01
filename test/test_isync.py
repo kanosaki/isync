@@ -100,21 +100,35 @@ class TestLibrarySyncer:
         assert_file_exists(DEVICEDIR, 'A Playlist', '1 TuneDelta.mp3')
 
 
-class DummyWorker(isync.Worker):
+class DummyWorker(isync.WorkerMixin):
     def create_child(self):
         return DummyChildWorker()
 
-class DummyChildWorker(isync.Worker):
+class DummyChildWorker(isync.WorkerMixin):
     pass
+
+class APlaneClass:
+    def create_worker(self):
+        return DummyChildWorker()
 
 class TestWorker:
     def test_create(self):
-        worker = isync.Worker()
+        worker = isync.WorkerMixin()
         assert_equals(isync.ExecutorService.root.default, worker._executor)
 
     def test_inherit(self):
         parent_worker = DummyWorker()
-        child_worker = parent_worker.create_child()
         assert_equals(isync.ExecutorService.root.default, parent_worker._executor)
+        parent_worker._executor = 1
+        child_worker = parent_worker.create_child()
         assert_equals(child_worker._executor, parent_worker._executor)
+
+    def test_create_in_plane(self):
+        plane_class = APlaneClass()
+        isync.ExecutorService.root.default = 100
+        worker = plane_class.create_worker()
+        assert_equals(100, worker._executor)
+        
+
+
 
