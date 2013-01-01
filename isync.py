@@ -1,11 +1,41 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 # iSync: Walkman等のデバイスと、iTunesのプレイリストを同期します
 
 # Configs
 DEFAULT_CONFIG_FILENAME = 'iSyncConfig.json'
-
 SYSTEM_PLAYLISTS = set([ 'Libaray', 'ライブラリ' ])
+
+
+# --------------------------------
+# Languages {{{
+# --------------------------------
+
+import locale
+# Set POSIX locale variables.
+locale_key, encoding_name = locale.getlocale()
+language_strings = {
+    'ja_JP' : { # Japanese
+        'Python 3.3 or above required.' : 'Python 3.3以上をインストールして下さい。',
+        'Reading configurations...'     : '設定を読み込んでいます・・・・',
+        'Unable to read configuration, creating new one.' : '設定ファイルを読み込めませんでした。新規に作成し続行します。',
+        'Searching device...' : 'デバイスを探しています・・・',
+        'No suitable device found.' : '対応しているデバイスが見つかりませんでした',
+        'Multi suitable devices found. I will use {0} for syncing.' : '複数の使用可能デバイスが見つかりました、{0}を使用します',
+        'Warning: Track ID {0} is not found in library' : '警告: トラックID{0}はデータベースから見つかりませんでした。データベースが破損しています',
+        'Playlist {} was not found in library' : '設定ファイルが誤っています。プレイリスト「{}」はライブラリ中に存在しません。',
+        '<Path to iTunes Libaray.xml>': '<iTunes ライブラリへのパス>',
+        'No iTunes library found.' : 'iTuensライブラリが見つかりませんでした',
+    }    
+}
+def _i(key):
+    """gettext's '_' like function"""
+    try:
+        return language_strings[locale_key][key]
+    except KeyError:
+        return key
+# }}}
+# --------------------------------
 
 import plistlib
 import sys
@@ -26,8 +56,8 @@ import inspect
 from logging import error, warn, info
 from optparse import OptionParser
 
-if sys.version < '3.3':
-    raise 'Python 3.3 or above required.'
+if sys.version < '3.3' and False:
+    raise _i('Python 3.3 or above required.')
 
 FILEDIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -77,23 +107,23 @@ class Main:
     
     @cached_property
     def config(self):
-        info("Reading configurations...")
+        info(_i("Reading configurations..."))
         try:
             path = self.args.config
             return Config.load(self.args, path)
         except Exception as e:
             warn(e)
-            warn("Unable to read configuration, creating new one.")
+            warn(_i("Unable to read configuration, creating new one."))
             return Config.prepare_default(self.library)
     
     @cached_property
     def device(self):
-        info("Searching device...")
+        info(_i("Searching device..."))
         devices = list(DeviceLocator(self.env).find_all())
         if len(devices) < 1:
-            abort("No suitable device found.")
+            abort(_i("No suitable device found."))
         elif len(devices) > 1:
-            warn("Multi suitable devices found. I will use {0} for syncing.".format(devices[0]))
+            warn(_i("Multi suitable devices found. I will use {0} for syncing.").format(devices[0]))
         return devices[0]
 
     @cached_property
@@ -102,7 +132,7 @@ class Main:
             return Library(self.env.itunes_libfile())
         except Exception as e:
             error(e)
-            abort("No iTunes library found.")
+            abort(_i("No iTunes library found."))
 
     def _init_logger(self):
         logging.basicConfig(level=logging.DEBUG)
@@ -145,7 +175,7 @@ class Config:
     @staticmethod
     def prepare_default(library=None):
         dic = {
-            'library_path' : "<Path to iTunes Libaray.xml>",
+            'library_path' : _i("<Path to iTunes Libaray.xml>"),
             'target_playlists' : { '<Playlist Name>' : False },
             'force_update' : False,
             'keep_removed_files' : False,
@@ -207,7 +237,8 @@ class WrapList(ItemWrapperMixin, list): pass
 class NameAccessMixin:
     def __getattr__(self, name):
         if name.startswith('_'): # Ignore attribute starts with '_'
-            return super().__getattr__(name)
+            print(name)
+            return getattr(super(), name)
         ename = self._name_conversion(name)
         return self[ename]
 
@@ -355,7 +386,7 @@ class Library:
         if os.path.exists(self.file):
             return self.file
         else:
-            raise Exception('This library created by stream')
+            raise Exception("This library created by stream")
 
     def _set_path(self, val):
         self._path = val
@@ -415,7 +446,7 @@ class Playlist(NameAccessMixin, dict):
                 track_id = track['Track ID']
                 yield self.lib.track(track_id)
             except KeyError:
-                warn("Warning: Track ID", track_id, "is not found in library")
+                warn(_i("Warning: Track ID {0} is not found in library").format(track_id))
 
     @property
     def persistent_id(self):
@@ -445,7 +476,7 @@ class EnvironmentBuilder:
         elif os_name == 'Darwin':
             return MacOSX()
         else:
-            raise RuntimeError(os_name + " is not supported.")
+            raise RuntimeError(os_name + _i(" is not supported."))
 
     @staticmethod
     def create():
@@ -530,7 +561,7 @@ class Walkman(Device):
 
     @staticmethod
     def is_suitable(dev_dir):
-        capability_file_pat = os.path.join(dev_dir, "capability_*.xml")
+        capability_file_pat = os.path.join(dev_dir, 'capability_*.xml')
         return len(glob.glob(capability_file_pat)) > 0
     
     def playlist_dirpath(self, playlist):
@@ -538,7 +569,7 @@ class Walkman(Device):
         return os.path.join(self.root_dir, dirname)
 
     def __str__(self):
-        return "Walkman at {0}".format(self.root_dir)
+        return 'Walkman at {0}'.format(self.root_dir)
 
 # }}}
 # --------------------------------
@@ -674,6 +705,7 @@ class LibrarySyncer(WorkerMixin):
                 yield self.library.playlist_by_name(pname)
             except KeyError:
                 warn("Playlist {} was not found in library".format(pname))
+    start = sync
 
 class DryLibrarySyncer(LibrarySyncer):
     def targetdir(self, playlist):
