@@ -26,6 +26,7 @@ language_strings = {
         'Playlist {} was not found in library' : '設定ファイルが誤っています。プレイリスト「{}」はライブラリ中に存在しません。',
         '<Path to iTunes Libaray.xml>': '<iTunes ライブラリへのパス>',
         'No iTunes library found.' : 'iTuensライブラリが見つかりませんでした',
+        'Playlist {} was not found in library' : '設定ファイルに誤りがあります。プレイリスト「{}」はライブラリ中に存在しません。'
     }    
 }
 def _i(key):
@@ -135,7 +136,9 @@ class Main:
             abort(_i("No iTunes library found."))
 
     def _init_logger(self):
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(
+                level=logging.DEBUG,
+                format='%(asctime)-15s %(levelname)-5s %(message)s')
 
 class CommandArguments:
     def __init__(self):
@@ -704,7 +707,7 @@ class LibrarySyncer(WorkerMixin):
             try:
                 yield self.library.playlist_by_name(pname)
             except KeyError:
-                warn("Playlist {} was not found in library".format(pname))
+                warn(_i("Playlist {} was not found in library").format(pname))
     start = sync
 
 class DryLibrarySyncer(LibrarySyncer):
