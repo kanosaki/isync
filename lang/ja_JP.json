@@ -10,6 +10,6 @@
   "This library created by stream": "ストリームから作成されたライブラリでは実行できません。",
   "Warning: Track ID {0} is not found in library": "警告: トラックID{0}はデータベースから見つかりませんでした。データベースが破損しています",
   " is not supported.": "はサポートされていません",
-  "Locaiton of Track {} is not recorded on Library file.": "{}のパスがライブラリ中に記録されていませんでした"
+  "Locaiton of Track {} is not recorded on Library file.": "{}のパスがライブラリ中に記録されていませんでした",
   "Playlist {} was not found in library": "設定ファイルに誤りがあります。プレイリスト「{}」はライブラリ中に存在しません。"
 }
