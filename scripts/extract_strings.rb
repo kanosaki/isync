@@ -1,11 +1,10 @@
 #!/usr/bin/env ruby
 require 'json'
 require 'psych'
-
 GETTEXT_FUNC = "_i"
 PATTERN = /(?<=#{GETTEXT_FUNC}\()(?:"|')(.+)(?:"|')/
 LANG_NAME = '<lang_name>'
-LANG_DIR = 'lang'
+LANG_DIR = File.absolute_path(File.join(File.dirname(__FILE__), '../lang'))
 LANG_FILE_EXT = '.json'
 INITIAL_STRING = '=============='
 def extract(file)
