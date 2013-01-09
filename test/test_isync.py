@@ -46,6 +46,10 @@ def remove_test_files():
         if os.path.exists(d):
             shutil.rmtree(d)
 
+class ImmediateExecutor(isync.Executor):
+    def submit(self, f, *args, **kw):
+        return f(*args, **kw)
+
 class TestLibrary:
     def test_lib(self):
         lib = isync.Library(create_library('testlib.xml'))
@@ -53,7 +57,7 @@ class TestLibrary:
         assert_equals(pl.name, "A Playlist")
         assert_equals(1, len(pl.tracks))
         tr = lib.track(1368)
-        assert_equals(tr.name, 'TuneAlpha') 
+        assert_equals(tr.name, 'TuneAlpha')
         assert_equals(tr.album_artist, 'AlbumArtistBravo')
         assert_equals(tr.path, os.path.join(TUNESDIR, 'TuneAlpha.mp3'))
 
@@ -67,7 +71,7 @@ class TestWindows:
 class DummyPlaylists:
     @property
     def target_playlists(self):
-        return [ 'A Playlist' ]
+        return { 'A Playlist' : True }
 
 class TestLibrarySyncer:
     def setup(self):
@@ -82,6 +86,7 @@ class TestLibrarySyncer:
         dev = isync.Walkman(DEVICEDIR)
         cfg = DummyPlaylists()
         syncer = isync.LibrarySyncer(lib, cfg, dev)
+        syncer._inject_executor(ImmediateExecutor())
         syncer.sync()
         assert_file_exists(DEVICEDIR, 'A Playlist', '0 TuneDelta.mp3')
 
@@ -90,11 +95,14 @@ class TestLibrarySyncer:
         dev1 = isync.Walkman(DEVICEDIR)
         cfg1 = DummyPlaylists()
         syncer1 = isync.LibrarySyncer(lib1, cfg1, dev1)
+        syncer1._inject_executor(ImmediateExecutor())
         syncer1.sync()
+        syncer1.join()
         lib2 = isync.Library(create_library('testlib2.xml'))
         dev2 = isync.Walkman(DEVICEDIR)
         cfg2 = DummyPlaylists()
         syncer2 = isync.LibrarySyncer(lib2, cfg2, dev2)
+        syncer2._inject_executor(ImmediateExecutor())
         syncer2.sync()
         assert_file_exists(DEVICEDIR, 'A Playlist', '0 TuneAlpha.mp3')
         assert_file_exists(DEVICEDIR, 'A Playlist', '1 TuneDelta.mp3')
@@ -128,7 +136,7 @@ class TestWorker:
         isync.ExecutorService.root.default = 100
         worker = plane_class.create_worker()
         assert_equals(100, worker._executor)
-        
+
 
 
 
