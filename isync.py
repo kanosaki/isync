@@ -313,23 +313,22 @@ class IncompleteLibraryError(Exception):
 # --------------------------------
 #  Actions {{{
 # --------------------------------
-class Executor:
+class Executor(concurrent.futures.ThreadPoolExecutor):
     def __init__(self):
-        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        super().__init__(max_workers=1)
         self._history = queue.deque()
 
     def submit(self, f, *args, **kw):
         # TODO: Add exception handling
-        return self._executor.submit(f, *args, **kw)
+        super().submit(f, *args, **kw)
+
+    def shutdown(self):
+        super().shutdown()
 
 class DryExecutor(Executor):
     def submit(self, f, *args, **kw):
         return self._executor.submit(f.dryrun, *args, **kw)
 
-# For testing.
-class ImmediateExecutor(Executor):
-    def submit(self, f, *args, **kw):
-        return f(*args, **kw)
 
 class ExecutorService(dict):
     DEFAULT_KEY = '_default'
@@ -359,14 +358,10 @@ class WorkerMixin:
         return newobj
 
     def submit(self, action, *args, **kw):
-        self._prev_action = self._executor.submit(action, *args, **kw)
-        return self._prev_action
+        return self._executor.submit(action, *args, **kw)
 
-    def join(self):
-        if self._prev_action is not None:
-            return self._prev_action.result()
-        else:
-            return None
+    def shutdown(self):
+        self._executor.shutdown()
 
     def _inject_executor(self, executor):
         self._executor = executor

@@ -75,6 +75,7 @@ class DummyPlaylists:
 
 class TestLibrarySyncer:
     def setup(self):
+        remove_test_files()
         prepare_tunedir()
         prepare_dummy_walkmandir()
 
@@ -86,8 +87,8 @@ class TestLibrarySyncer:
         dev = isync.Walkman(DEVICEDIR)
         cfg = DummyPlaylists()
         syncer = isync.LibrarySyncer(lib, cfg, dev)
-        syncer._inject_executor(ImmediateExecutor())
         syncer.sync()
+        syncer.shutdown()
         assert_file_exists(DEVICEDIR, 'A Playlist', '0 TuneDelta.mp3')
 
     def test_update(self):
@@ -97,7 +98,7 @@ class TestLibrarySyncer:
         syncer1 = isync.LibrarySyncer(lib1, cfg1, dev1)
         syncer1._inject_executor(ImmediateExecutor())
         syncer1.sync()
-        syncer1.join()
+        syncer1.shutdown()
         lib2 = isync.Library(create_library('testlib2.xml'))
         dev2 = isync.Walkman(DEVICEDIR)
         cfg2 = DummyPlaylists()
