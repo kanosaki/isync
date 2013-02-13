@@ -60,7 +60,7 @@ import json
 import concurrent.futures
 import queue
 import inspect
-from logging import error, warn, info
+from logging import error, warn, info, debug
 from optparse import OptionParser
 
 if sys.version < '3.3':
@@ -236,6 +236,12 @@ def abort(*args):
     print(*args, file=sys.stderr)
     sys.exit(-1)
 
+def zipwithindex(iterable, start=0):
+    index = start
+    for item in iterable:
+        yield (index, item)
+        index += 1
+
 class ItemWrapperMixin:
     def __init__(self, wrapper, items=None):
         self.wrapper = wrapper
@@ -327,7 +333,10 @@ class Executor(concurrent.futures.ThreadPoolExecutor):
 
 class DryExecutor(Executor):
     def submit(self, f, *args, **kw):
-        return self._executor.submit(f.dryrun, *args, **kw)
+        try:
+            return super().submit(f.dryrun, *args, **kw)
+        except AttributeError:
+            info("DRYRUN: Running {}".format(repr(f)))
 
 
 class ExecutorService(dict):
@@ -353,6 +362,7 @@ class WorkerMixin:
             callerobj = inspect.stack()[1][0].f_locals['self']
             newobj._executor = callerobj._executor
         except (KeyError, IndexError, TypeError, AttributeError) as e:
+            debug("Creating new ExecutorRoot for {}".format(cls))
             newobj._executor = ExecutorService.root.default
         newobj._prev_action = None
         return newobj
@@ -732,7 +742,8 @@ class LibrarySyncer(WorkerMixin):
         self.device = device
 
     def sync(self):
-        for playlist in self.prepare_playlists():
+        self.print_plan()
+        for playlist in self.target_playlists:
             dst_dir = self.targetdir(playlist)
             syncer = PlaylistSyncer(playlist, dst_dir)
             syncer.sync()
@@ -740,6 +751,10 @@ class LibrarySyncer(WorkerMixin):
     def targetdir(self, playlist): # -> SyncDirectory
         dirpath = self.device.playlist_dirpath(playlist)
         return SyncDirectory(dirpath, len(playlist.tracks))
+
+    @cached_property
+    def target_playlists(self):
+        return list(self.prepare_playlists())
 
     def prepare_playlists(self): # -> iter<Playlist>
         for pname, is_active in self.config.target_playlists.items():
@@ -749,6 +764,13 @@ class LibrarySyncer(WorkerMixin):
                 yield self.library.playlist_by_name(pname)
             except KeyError:
                 warn(_i("Playlist {} was not found in library").format(pname))
+
+    def print_plan(self, output=info):
+        output(_i("LibrarySyncer at {}").format(self.library.path))
+        output(_i("Following playlists will be synced"))
+        for index, playlist in zipwithindex(self.target_playlists, start=1):
+            output("{}: {}".format(index, playlist.name))
+
     start = sync
 
 class DryLibrarySyncer(LibrarySyncer):
