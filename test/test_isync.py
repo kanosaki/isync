@@ -89,7 +89,7 @@ class TestLibrarySyncer:
         syncer = isync.LibrarySyncer(lib, cfg, dev)
         syncer.sync(print_plan=False)
         syncer.shutdown()
-        assert_file_exists(DEVICEDIR, 'A Playlist', '0 TuneDelta.mp3')
+        assert_file_exists(DEVICEDIR, 'A Playlist', '1 TuneDelta.mp3')
 
     def test_update(self):
         lib1 = isync.Library(create_library('testlib.xml'))
@@ -105,8 +105,8 @@ class TestLibrarySyncer:
         syncer2 = isync.LibrarySyncer(lib2, cfg2, dev2)
         syncer2._inject_executor(ImmediateExecutor())
         syncer2.sync(print_plan=False)
-        assert_file_exists(DEVICEDIR, 'A Playlist', '0 TuneAlpha.mp3')
-        assert_file_exists(DEVICEDIR, 'A Playlist', '1 TuneDelta.mp3')
+        assert_file_exists(DEVICEDIR, 'A Playlist', '1 TuneAlpha.mp3')
+        assert_file_exists(DEVICEDIR, 'A Playlist', '2 TuneDelta.mp3')
 
 
 class DummyWorker(isync.WorkerMixin):

@@ -269,6 +269,13 @@ class NameAccessMixin:
         ename = self._convert_name(name)
         return self[ename]
 
+    def get(self, key, default=None):
+        ename = self._convert_name(key)
+        if ename in self:
+            return self[ename]
+        else:
+            return default
+
     def _convert_name(self, name):
         return ' '.join(list(map(str.capitalize, name.split('_'))))
 
@@ -393,7 +400,7 @@ class Action:
 
     def dryrun(self, print_into=True):
         if print_into:
-            info(str(self))
+            debug(str(self))
 
 class TwoParamAction(Action):
     def __init__(self, src, dst):
@@ -791,8 +798,10 @@ class PlaylistSyncer(WorkerMixin):
 
     def sync(self):
         tracks = self.playlist.tracks
-        tracks_count = len(tracks)
-        for track, index in zip(tracks, range(tracks_count)):
+        for index, track in zipwithindex(tracks, start=1):
+            artist = track.get('artist', _i('<No artist>'))
+            title  = track.get('name', _i('<No Title>'))
+            info(_i("Syncing {}/{}").format(artist, title))
             self.targetdir.update_track_at(track, index)
 
 
