@@ -319,17 +319,21 @@ class IncompleteLibraryError(Exception):
 # --------------------------------
 #  Actions {{{
 # --------------------------------
-class Executor(concurrent.futures.ThreadPoolExecutor):
+class Executor:
     def __init__(self):
-        super().__init__(max_workers=1)
         self._history = queue.deque()
+        self.init_worker()
+
+    def init_worker(self):
+        self.worker = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
     def submit(self, f, *args, **kw):
         # TODO: Add exception handling
-        super().submit(f, *args, **kw)
+        self.worker.submit(f, *args, **kw)
 
     def shutdown(self):
-        super().shutdown()
+        self.worker.shutdown()
+        self.init_worker()
 
 class DryExecutor(Executor):
     def submit(self, f, *args, **kw):
@@ -741,8 +745,9 @@ class LibrarySyncer(WorkerMixin):
         self.config = config
         self.device = device
 
-    def sync(self):
-        self.print_plan()
+    def sync(self, print_plan=True):
+        if print_plan:
+            self.print_plan()
         for playlist in self.target_playlists:
             dst_dir = self.targetdir(playlist)
             syncer = PlaylistSyncer(playlist, dst_dir)
