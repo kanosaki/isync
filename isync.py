@@ -16,18 +16,27 @@ import locale
 # Set POSIX locale variables.
 locale_key, encoding_name = locale.getlocale()
 language_strings = {
-    'ja_JP' : { # Japanese
-        'Python 3.3 or above required.' : 'Python 3.3以上をインストールして下さい。',
-        'Reading configurations...'     : '設定を読み込んでいます・・・・',
-        'Unable to read configuration, creating new one.' : '設定ファイルを読み込めませんでした。新規に作成し続行します。',
-        'Searching device...' : 'デバイスを探しています・・・',
-        'No suitable device found.' : '対応しているデバイスが見つかりませんでした',
-        'Multi suitable devices found. I will use {0} for syncing.' : '複数の使用可能デバイスが見つかりました、{0}を使用します',
-        'Warning: Track ID {0} is not found in library' : '警告: トラックID{0}はデータベースから見つかりませんでした。データベースが破損しています',
-        'Playlist {} was not found in library' : '設定ファイルが誤っています。プレイリスト「{}」はライブラリ中に存在しません。',
-        '<Path to iTunes Libaray.xml>': '<iTunes ライブラリへのパス>',
-        'No iTunes library found.' : 'iTuensライブラリが見つかりませんでした',
-        'Playlist {} was not found in library' : '設定ファイルに誤りがあります。プレイリスト「{}」はライブラリ中に存在しません。'
+    'ja_JP' : {
+        "Python 3.3 or above required.": "Python 3.3以上をインストールして下さい。",
+        "Reading configurations...": "設定を読み込んでいます・・・・",
+        "Unable to read configuration, creating new one.": "設定ファイルを読み込めませんでした。新規に作成し続行します。",
+        "Searching device...": "デバイスを探しています・・・",
+        "No suitable device found.": "対応しているデバイスが見つかりませんでした",
+        "Multi suitable devices found. I will use {0} for syncing.": "複数の使用可能デバイスが見つかりました、{0}を使用します",
+        "No iTunes library found.": "iTuensライブラリが見つかりませんでした",
+        "<Path to iTunes Libaray.xml>": "<iTunes ライブラリへのパス>",
+        "<Playlist Name>": "<プレイリスト名>",
+        "This library created by stream": "ストリームから作成されたライブラリでは実行できません。",
+        "Warning: Track ID {0} is not found in library": "警告: トラックID{0}はデータベースから見つかりませんでした。データベースが破損しています",
+        " is not supported.": "はサポートされていません",
+        "Location of Track {} is not recorded on Library file.": "トラック{}の場所がライブラリに記録されていませんでした",
+        "Playlist {} was not found in library": "設定ファイルに誤りがあります。プレイリスト「{}」はライブラリ中に存在しません。",
+        "LibrarySyncer at {}": "LibrarySyncer at {}",
+        "Following playlists will be synced": "以下のプレイリストが同期されます",
+        "<No artist>": "<アーティスト無し>",
+        "<No Title>": "<タイトル無し>",
+        "Syncing {}/{}": "同期中 {}/{}",
+        "Locaiton of Track {} is not recorded on Library file.": "{}のパスがライブラリ中に記録されていませんでした"
     }
 }
 if locale_key in language_strings:
