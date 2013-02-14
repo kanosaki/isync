@@ -6,7 +6,7 @@
 # Configs
 DEFAULT_CONFIG_FILENAME = 'iSyncConfig.json'
 SYSTEM_PLAYLISTS = set([ 'Libaray', 'ライブラリ' ])
-
+DEBUG_MODE = True
 
 # --------------------------------
 # Languages {{{
@@ -39,6 +39,7 @@ if locale_key in language_strings:
         except KeyError:
             return key
 else:
+    current_locale = "C"
     def _i(key):
         return key
 # }}}
@@ -86,13 +87,13 @@ def cached_property(f):
 # --------------------------------
 class Main:
     def __init__(self):
-        self._init_logger()
         self.args = CommandArguments()
+        self._init_logger()
 
     def start(self):
         self.sync()
         if self.env.is_win:
-            input()
+            input() # pause console for cmd.exe
 
     def create_syncer(self):
         if self.config.is_dry:
@@ -142,20 +143,43 @@ class Main:
             error(e)
             abort(_i("No iTunes library found."))
 
+    # DO NOT refer any attributes except 'args' to make sense of
+    # logging.basicConfig
     def _init_logger(self):
-        logging.basicConfig(
-                level=logging.DEBUG,
-                format='%(asctime)-15s %(levelname)-5s %(message)s')
+        lvl = logging.INFO
+        fmt='%(levelname)-5s %(message)s'
+        if ('verbose' in self.args) or DEBUG_MODE:
+            lvl = logging.DEBUG
+            fmt='%(asctime)-15s %(levelname)-5s %(message)s'
+        if 'logging' in self.args:
+            lvl = getattr(logging, self.args.logging.upper())
+        logging.basicConfig(level=lvl, format=fmt)
 
+# DO NOT use logging functions
 class CommandArguments:
-    def __init__(self):
+    def __init__(self, args=None):
         parser = OptionParser()
         parser.add_option('-c', '--config', action='store', type='string', dest='config')
         parser.add_option('-d', '--dry', action='store_true', dest='dry')
-        self._opts, _ = parser.parse_args()
+        parser.add_option('-v', '--verbose', action='store_true', dest='verbose')
+        parser.add_option('--logging', action='store', type='choice', dest='logging',
+                          choices=['ERROR', 'WARN', 'INFO', 'DEBUG'])
+        self._opts, _ = parser.parse_args(args=args)
+
+    def __contains__(self, key):
+        return hasattr(self._opts, key) and (self[key] is not None)
 
     def __getattr__(self, key):
         return getattr(self._opts, key)
+
+    def __getitem__(self, key):
+        return getattr(self._opts, key)
+
+    def get(self, key, default=None):
+        if key in self:
+            return self[key]
+        else:
+            return default
 
 class VoidObject:
     def __getattr__(self, key):
@@ -169,7 +193,13 @@ class Config:
         self._args = args
 
     def __getattr__(self, key):
-        return self._dic[key]
+        return self._args.get(key) or self._dic[key]
+
+    def get(self, key, default=None):
+        return self._args.get(key) or self._dic.get(key) or default
+
+    def __contains__(self, key):
+        return (key in self._dic) or (key in self._args)
 
     def _inject_libaray(self, library):
             self._dic['library_path'] = library.path
@@ -195,7 +225,7 @@ class Config:
     def prepare_default(library=None):
         dic = {
             'library_path' : _i("<Path to iTunes Libaray.xml>"),
-            'target_playlists' : { '<Playlist Name>' : False },
+            'target_playlists' : { _i('<Playlist Name>') : False },
             'force_update' : False,
             'keep_removed_files' : False,
             }
@@ -601,7 +631,7 @@ class EnvTrackAdapter:
         try:
             url = self.location
         except KeyError:
-            error(_i("Locaiton of Track {} is not recorded on Library file.").format(self.name))
+            error(_i("Location of Track {} is not recorded on Library file.").format(self.name))
             raise IncompleteLibraryError()
         return self.env.url_to_path(self.location)
 

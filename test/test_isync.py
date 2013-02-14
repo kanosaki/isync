@@ -138,6 +138,19 @@ class TestWorker:
         worker = plane_class.create_worker()
         assert_equals(100, worker._executor)
 
+class TestCommandArguments:
+    def test_parse(self):
+        opts = isync.CommandArguments(['-c', 'foobar', '-d'])
+        ok_(opts.dry)
+        assert_equals('foobar', opts.config)
+
+    def test_interface(self):
+        opts = isync.CommandArguments(['-v'])
+        ok_('verbose' in opts)
+        ok_('logging' not in opts)
+
+
+
 
 
 
