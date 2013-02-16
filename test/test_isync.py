@@ -140,9 +140,9 @@ class TestWorker:
 
 class TestCommandArguments:
     def test_parse(self):
-        opts = isync.CommandArguments(['-c', 'foobar', '-d'])
+        opts = isync.CommandArguments('--logging INFO -d'.split())
         ok_(opts.dry)
-        assert_equals('foobar', opts.config)
+        assert_equals(opts.logging, 'INFO')
 
     def test_interface(self):
         opts = isync.CommandArguments(['-v'])

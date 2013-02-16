@@ -2,12 +2,6 @@
 # -*- coding: utf-8 -*-
 # iSync: Walkman等のデバイスと、iTunesのプレイリストを同期します
 
-
-# Configs
-DEFAULT_CONFIG_FILENAME = 'iSyncConfig.json'
-SYSTEM_PLAYLISTS = set([ 'Libaray', 'ライブラリ' ])
-DEBUG_MODE = True
-
 # --------------------------------
 # Languages {{{
 # --------------------------------
@@ -54,6 +48,15 @@ else:
 # }}}
 # --------------------------------
 
+# --------------------------------
+# Core configurations
+# --------------------------------
+APP_DESCRIPTION = _i('A simple synchronizer between iTunes and Walkman')
+DEFAULT_CONFIG_FILENAME = 'iSyncConfig.json'
+SYSTEM_PLAYLISTS = set([ 'Libaray', 'ライブラリ' ])
+DEBUG_MODE = True
+
+# Import list
 import plistlib
 import sys
 import os
@@ -70,14 +73,16 @@ import json
 import concurrent.futures
 import queue
 import inspect
+import argparse
 from logging import error, warn, info, debug
-from optparse import OptionParser
 
+# Version check
 if sys.version < '3.3':
     raise _i('Python 3.3 or above required.')
 
 FILEDIR = os.path.abspath(os.path.dirname(__file__))
 
+# Utility functions
 def cached_property(f):
     def get(self):
         try:
@@ -167,13 +172,18 @@ class Main:
 # DO NOT use logging functions
 class CommandArguments:
     def __init__(self, args=None):
-        parser = OptionParser()
-        parser.add_option('-c', '--config', action='store', type='string', dest='config')
-        parser.add_option('-d', '--dry', action='store_true', dest='dry')
-        parser.add_option('-v', '--verbose', action='store_true', dest='verbose')
-        parser.add_option('--logging', action='store', type='choice', dest='logging',
-                          choices=['ERROR', 'WARN', 'INFO', 'DEBUG'])
-        self._opts, _ = parser.parse_args(args=args)
+        parser = argparse.ArgumentParser(description=APP_DESCRIPTION)
+        parser.add_argument('-c', '--config', metavar='PATH',
+                            nargs='?', type=argparse.FileType('r'),
+                            help=_i('Path to config file'))
+        parser.add_argument('-d', '--dry', action='store_true',
+                            help=_i('Dry-run mode.'))
+        parser.add_argument('-v', '--verbose', action='store_true',
+                            help=_i('Verbose output. Set logging level to DEBUG'))
+        parser.add_argument('--logging',
+                            nargs='?', choices=['ERROR', 'WARN', 'INFO', 'DEBUG'],
+                            help=_i('Set logging level, default is WARN, overwrites "-v" option'))
+        self._opts = parser.parse_args(args)
 
     def __contains__(self, key):
         return hasattr(self._opts, key) and (self[key] is not None)
