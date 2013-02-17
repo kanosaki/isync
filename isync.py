@@ -782,7 +782,7 @@ class SyncDirectory(WorkerMixin):
 
     def update_filename(self, track, pos):
         newname = self.actual_name(track, pos)
-        oldname = self.files_map[track.name]
+        oldname = self.files_map[track.filename]
         if newname != oldname:
             self.move_file(oldname, newname)
 
