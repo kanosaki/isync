@@ -866,6 +866,6 @@ class PlaylistSyncer(WorkerMixin):
 
 if __name__ == '__main__':
     m = Main()
-    m.config.inject(dry=True)
+    #m.config.inject(dry=True)
     m.start()
 
