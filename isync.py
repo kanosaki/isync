@@ -55,6 +55,7 @@ APP_DESCRIPTION = _i('A simple synchronizer between iTunes and Walkman')
 DEFAULT_CONFIG_FILENAME = 'iSyncConfig.json'
 SYSTEM_PLAYLISTS = set([ 'Libaray', 'ライブラリ' ])
 DEBUG_MODE = True
+MUSICFILE_EXTENSIONS = ['mp3', 'm4a']
 
 # Import list
 import plistlib
@@ -545,13 +546,20 @@ class Library:
         return factory
 
 class Track(NameAccessMixin, dict):
-    pass
+    @cached_property
+    def filename(self):
+        return fixfilename(self.name)
+
 
 
 class Playlist(NameAccessMixin, dict):
     def __init__(self, lib, dic):
         self.lib = lib
         dict.__init__(self, dic)
+
+    @cached_property
+    def filename(self):
+        return fixfilename(self.name)
 
     @cached_property
     def tracks(self):
@@ -650,8 +658,7 @@ class EnvTrackAdapter:
         try:
             url = self.location
         except KeyError:
-            error(_i("Location of Track {} is not recorded on Library file.").format(self.name))
-            raise IncompleteLibraryError()
+            raise IncompleteLibraryError(_i("Location of Track {} is not recorded on Library file.").format(self.name))
         return self.env.url_to_path(self.location)
 
     @cached_property
@@ -685,8 +692,7 @@ class Walkman(Device):
         return len(glob.glob(capability_file_pat)) > 0
 
     def playlist_dirpath(self, playlist):
-        dirname = fixfilename(playlist.name)
-        return os.path.join(self.root_dir, dirname)
+        return os.path.join(self.root_dir, 'MUSIC', playlist.filename)
 
     def __str__(self):
         return 'Walkman at {0}'.format(self.root_dir)
@@ -737,7 +743,7 @@ class VoidFile(VoidObject):
 
 
 class SyncDirectory(WorkerMixin):
-    RE_PAT = re.compile(r'\d+\s(.+)')
+    RE_PAT = re.compile(r'\d+\s(.+)\.({})'.format(MUSICFILE_EXTENSIONS))
     def __init__(self, path, expected_files_count, force_write=False, dryrun=False):
         self.path = path
         self.files_map = self.collect_files()
@@ -752,26 +758,30 @@ class SyncDirectory(WorkerMixin):
             match = self.RE_PAT.match(fname)
             if match:
                 fs[match.group(1)] = fname
+        debug('SyncDirectory {}: {}'.format(self.path, fs))
         return fs
 
     def update_track_at(self, track, pos):
-        if track.name in self.files_map:
-            self.update_filename(track, pos)
-        else:
-            self.copy_new(track, pos)
+        try:
+            if track.filename in self.files_map:
+                self.update_filename(track, pos)
+            else:
+                self.copy_new(track, pos)
+        except IncompleteLibraryError as ex:
+            error(ex)
+            error(_i('We could not sync {} because it has incomplete information').format(track.name))
 
     def actual_name(self, track, pos):
         index = str(pos).zfill(self.index_digits)
-        escaped_name = fixfilename(track.name)
         _, extension = os.path.splitext(track.path)
-        return '{0} {1}{2}'.format(index, escaped_name, extension)
+        return '{0} {1}{2}'.format(index, track.filename, extension)
 
     def actual_path(self, track, pos):
         name = self.actual_name(track, pos)
         return os.path.join(self.path, name)
 
     def update_filename(self, track, pos):
-        newname = self.actual_name(track.name, pos)
+        newname = self.actual_name(track, pos)
         oldname = self.files_map[track.name]
         if newname != oldname:
             self.move_file(oldname, newname)
@@ -785,12 +795,9 @@ class SyncDirectory(WorkerMixin):
         self.submit(FileMoveAction(src, dst))
 
     def copy_new(self, track, pos):
-        try:
-            path = self.actual_path(track, pos)
-            actual_file = ActualFile(path)
-            actual_file.update_track(track)
-        except IncompleteLibraryError:
-            pass
+        path = self.actual_path(track, pos)
+        actual_file = ActualFile(path)
+        actual_file.update_track(track)
 
     def create_actual_file(self, path):
         return ActualFile(path)
@@ -850,8 +857,8 @@ class PlaylistSyncer(WorkerMixin):
         for index, track in zipwithindex(tracks, start=1):
             artist = track.get('artist', _i('<No artist>'))
             title  = track.get('name', _i('<No Title>'))
-            info(_i("Syncing {}/{}").format(artist, title))
-            self.targetdir.update_track_at(track, index)
+                info(_i("Syncing {}/{}").format(artist, title))
+                self.targetdir.update_track_at(track, index)
 
 
 # }}}
