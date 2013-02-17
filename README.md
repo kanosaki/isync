@@ -1,3 +1,6 @@
+This software is in development. So it does not works for now.
+現在開発中ー
+
 isync - シンプルなiTunesとWalkmanの同期ソフト
 ============================================
 
