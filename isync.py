@@ -452,6 +452,20 @@ class Action:
         if print_into:
             debug(str(self))
 
+    def on_complete(self):
+        pass
+
+class Task(list, Action):
+    def run(self):
+        for action in self:
+            action.run()
+
+    def dryrun(self):
+        for action in self:
+            action.dryrun()
+
+CompositeAction = Task
+
 class TwoParamAction(Action):
     def __init__(self, src, dst):
         self.src = src
