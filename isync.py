@@ -622,7 +622,7 @@ class Environment:
         return os.path.join(self.homedir(), 'Music', 'iTunes')
 
     def itunes_libfilename(self):
-        return 'iTunes Music Library.xml'
+        return 'iTunes Library.xml'
 
     def itunes_libfile(self):
         return os.path.join(self.itunes_dir(), self.itunes_libfilename())
@@ -857,8 +857,8 @@ class PlaylistSyncer(WorkerMixin):
         for index, track in zipwithindex(tracks, start=1):
             artist = track.get('artist', _i('<No artist>'))
             title  = track.get('name', _i('<No Title>'))
-                info(_i("Syncing {}/{}").format(artist, title))
-                self.targetdir.update_track_at(track, index)
+            info(_i("Syncing {}/{}").format(artist, title))
+            self.targetdir.update_track_at(track, index)
 
 
 # }}}
