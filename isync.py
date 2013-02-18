@@ -421,11 +421,11 @@ class WorkerMixin:
         newobj = super().__new__(cls)
         try:
             callerobj = inspect.stack()[1][0].f_locals['self']
+            callerobj = inspect.currentframe().f_back.f_locals['self']
             newobj._executor = callerobj._executor
         except (KeyError, IndexError, TypeError, AttributeError) as e:
             debug("Creating new ExecutorRoot for {}".format(cls))
             newobj._executor = ExecutorService.root.default
-        newobj._prev_action = None
         return newobj
 
     def submit(self, action, *args, **kw):
