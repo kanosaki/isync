@@ -420,7 +420,6 @@ class WorkerMixin:
     def __new__(cls, *args, **kw):
         newobj = super().__new__(cls)
         try:
-            callerobj = inspect.stack()[1][0].f_locals['self']
             callerobj = inspect.currentframe().f_back.f_locals['self']
             newobj._executor = callerobj._executor
         except (KeyError, IndexError, TypeError, AttributeError) as e:
