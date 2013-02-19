@@ -75,6 +75,7 @@ import concurrent.futures
 import queue
 import inspect
 import argparse
+import threading
 from logging import error, warn, info, debug
 
 # Version check
@@ -378,26 +379,51 @@ class IncompleteLibraryError(Exception):
 # --------------------------------
 class Executor:
     def __init__(self):
-        self._history = queue.deque()
-        self.init_worker()
+        self._task_queue = queue.Queue()
+        self.is_stopped = False
+        self.__lock = threading.RLock() # reentrant lock
 
-    def init_worker(self):
-        self.worker = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    def start(self):
+        with self.__lock:
+            self.is_stopped = False
+            self._flush_tasks()
+
+    def _flush_tasks(self):
+        while not self._task_queue.empty():
+            f, args, kw = self._task_queue.get()
+            self.worker.submit(f, *args, **kw)
+
+    @property
+    def worker(self):
+        with self.__lock:
+            try:
+                return self._worker
+            except AttributeError:
+                self._worker = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                return  self._worker
 
     def submit(self, f, *args, **kw):
-        # TODO: Add exception handling
-        self.worker.submit(f, *args, **kw)
+        with self.__lock:
+            if self.is_stopped:
+                self._task_queue.put((f, args, kw))
+            else:
+                self.worker.submit(f, *args, **kw)
 
-    def shutdown(self):
-        self.worker.shutdown()
-        self.init_worker()
+    def stop(self):
+        with self.__lock:
+            if not self.is_stopped:
+                self.worker.shutdown()
+                del self._worker
+                self.is_stopped = True
+    shutdown = stop
+
 
 class DryExecutor(Executor):
     def submit(self, f, *args, **kw):
         try:
             return super().submit(f.dryrun, *args, **kw)
         except AttributeError:
-            info("DRYRUN: Running {}".format(repr(f)))
+            info("DRYRUN: Submitting {}".format(repr(f)))
 
 
 class ExecutorService(dict):
@@ -824,10 +850,13 @@ class LibrarySyncer(WorkerMixin):
     def sync(self, print_plan=True):
         if print_plan:
             self.print_plan()
+
+        self._executor.stop()
         for playlist in self.target_playlists:
             dst_dir = self.targetdir(playlist)
             syncer = PlaylistSyncer(playlist, dst_dir)
             syncer.sync()
+        self._executor.start()
 
     def targetdir(self, playlist): # -> SyncDirectory
         dirpath = self.device.playlist_dirpath(playlist)
@@ -879,6 +908,6 @@ class PlaylistSyncer(WorkerMixin):
 
 if __name__ == '__main__':
     m = Main()
-    #m.config.inject(dry=True)
+    m.config.inject(dry=True)
     m.start()
 
