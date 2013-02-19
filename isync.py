@@ -10,7 +10,7 @@ import locale
 # Set POSIX locale variables.
 locale_key, encoding_name = locale.getlocale()
 language_strings = {
-    'ja_JP' : {
+    'ja_JP': {
         "Python 3.3 or above required.": "Python 3.3以上をインストールして下さい。",
         "Reading configurations...": "設定を読み込んでいます・・・・",
         "Unable to read configuration, creating new one.": "設定ファイルを読み込めませんでした。新規に作成し続行します。",
@@ -35,6 +35,7 @@ language_strings = {
 }
 if locale_key in language_strings:
     current_locale = language_strings[locale_key]
+
     def _i(key):
         """gettext's '_' like function"""
         try:
@@ -43,6 +44,7 @@ if locale_key in language_strings:
             return key
 else:
     current_locale = "C"
+
     def _i(key):
         return key
 # }}}
@@ -53,7 +55,7 @@ else:
 # --------------------------------
 APP_DESCRIPTION = _i('A simple synchronizer between iTunes and Walkman')
 DEFAULT_CONFIG_FILENAME = 'iSyncConfig.json'
-SYSTEM_PLAYLISTS = set([ 'Libaray', 'ライブラリ' ])
+SYSTEM_PLAYLISTS = set(['Libaray', 'ライブラリ'])
 DEBUG_MODE = True
 MUSICFILE_EXTENSIONS = ['mp3', 'm4a']
 
@@ -84,6 +86,7 @@ if sys.version < '3.3':
 
 FILEDIR = os.path.abspath(os.path.dirname(__file__))
 
+
 # Utility functions
 def cached_property(f):
     def get(self):
@@ -98,6 +101,7 @@ def cached_property(f):
             return x
     return property(get)
 
+
 # --------------------------------
 #  Main class
 # --------------------------------
@@ -109,7 +113,7 @@ class Main:
     def start(self):
         self.sync()
         if self.env.is_win:
-            input() # pause console for cmd.exe
+            input()  # pause console for cmd.exe
 
     def create_syncer(self):
         if self.config.is_dry:
@@ -121,9 +125,9 @@ class Main:
     def sync(self):
         syncerClass = self.create_syncer()
         syncer = syncerClass(
-                self.library,
-                self.config,
-                self.device)
+            self.library,
+            self.config,
+            self.device)
         syncer.start()
 
     @property
@@ -148,7 +152,8 @@ class Main:
         if len(devices) < 1:
             abort(_i("No suitable device found."))
         elif len(devices) > 1:
-            warn(_i("Multi suitable devices found. I will use {0} for syncing.").format(devices[0]))
+            warn(_i("Multi suitable devices found.  I will use {0} for \
+                    syncing.").format(devices[0]))
         return devices[0]
 
     @cached_property
@@ -163,13 +168,14 @@ class Main:
     # logging.basicConfig
     def _init_logger(self):
         lvl = logging.INFO
-        fmt='%(levelname)-5s %(message)s'
+        fmt = '%(levelname)-5s %(message)s'
         if ('verbose' in self.args) or DEBUG_MODE:
             lvl = logging.DEBUG
-            fmt='%(asctime)-15s %(levelname)-5s %(message)s'
+            fmt = '%(asctime)-15s %(levelname)-5s %(message)s'
         if 'logging' in self.args:
             lvl = getattr(logging, self.args.logging.upper())
         logging.basicConfig(level=lvl, format=fmt)
+
 
 # DO NOT use logging functions
 class CommandArguments:
@@ -181,10 +187,15 @@ class CommandArguments:
         parser.add_argument('-d', '--dry', action='store_true',
                             help=_i('Dry-run mode.'))
         parser.add_argument('-v', '--verbose', action='store_true',
-                            help=_i('Verbose output. Set logging level to DEBUG'))
+                            help=_i('Verbose output. \
+                                    Set logging level to DEBUG'))
         parser.add_argument('--logging',
-                            nargs='?', choices=['ERROR', 'WARN', 'INFO', 'DEBUG'],
-                            help=_i('Set logging level, default is WARN, overwrites "-v" option'))
+                            nargs='?', choices=['ERROR',
+                                                'WARN',
+                                                'INFO',
+                                                'DEBUG'],
+                            help=_i('Set logging level, \
+                                    default is WARN, overwrites "-v" option'))
         self._opts = parser.parse_args(args)
 
     def __contains__(self, key):
@@ -202,9 +213,11 @@ class CommandArguments:
         else:
             return default
 
+
 class VoidObject:
     def __getattr__(self, key):
         return None
+
 
 class Config:
     def __init__(self, dic, args, path=DEFAULT_CONFIG_FILENAME):
@@ -225,9 +238,9 @@ class Config:
     def _inject_libaray(self, library):
             self._dic['library_path'] = library.path
             self._dic['target_playlists'] = dict(
-                    (pl.name, False)
-                    for pl in library.playlists
-                    if not pl.is_system)
+                (pl.name, False)
+                for pl in library.playlists
+                if not pl.is_system)
 
     def _dic_tryget(self, key):
         try:
@@ -245,11 +258,11 @@ class Config:
     @staticmethod
     def prepare_default(library=None):
         dic = {
-            'library_path' : _i("<Path to iTunes Libaray.xml>"),
-            'target_playlists' : { _i('<Playlist Name>') : False },
-            'force_update' : False,
-            'keep_removed_files' : False,
-            }
+            'library_path': _i("<Path to iTunes Libaray.xml>"),
+            'target_playlists': {_i('<Playlist Name>'): False},
+            'force_update': False,
+            'keep_removed_files': False,
+        }
         cfg = Config(dic, VoidObject())
         if library is not None:
             cfg._inject_libaray(library)
@@ -276,22 +289,25 @@ class Config:
 # --------------------------------
 #  Utilities {{{
 # --------------------------------
-
 def id_fn(x):
     return x
+
 
 def void_fn(*args, **kw):
     pass
 
+
 def abort(*args):
     print(*args, file=sys.stderr)
     sys.exit(-1)
+
 
 def zipwithindex(iterable, start=0):
     index = start
     for item in iterable:
         yield (index, item)
         index += 1
+
 
 class ItemWrapperMixin:
     def __init__(self, wrapper, items=None):
@@ -306,8 +322,10 @@ class ItemWrapperMixin:
         for item in super().__iter__():
             yield self.wrapper(item)
 
+
 class WrapDict(ItemWrapperMixin, dict):
     pass
+
 
 class WrapList(ItemWrapperMixin, list):
     pass
@@ -315,7 +333,7 @@ class WrapList(ItemWrapperMixin, list):
 
 class NameAccessMixin:
     def __getattr__(self, name):
-        if name.startswith('_'): # Ignore attribute starts with '_'
+        if name.startswith('_'):  # Ignore attribute starts with '_'
             return getattr(super(), name)
         ename = self._convert_name(name)
         return self[ename]
@@ -330,19 +348,24 @@ class NameAccessMixin:
     def _convert_name(self, name):
         return ' '.join(list(map(str.capitalize, name.split('_'))))
 
+
 def fixfilename(name):
     return FilenameFixer.instance.filter(name)
 
 
-InvalidFilePathChars = set(list(iter('"<>|:*?\\/')) + list(map(chr, range(0, 31))))
+InvalidFilePathChars = set(list(iter('"<>|:*?\\/'))
+                           + list(map(chr, range(0, 31))))
+
+
 class FilenameFixer:
     def filter(self, expr):
         return ''.join(self._filter_invalid_dirname(expr))
 
     def _filter_invalid_dirname(self, name):
-        return filter(lambda c : c not in InvalidFilePathChars, name)
+        return filter(lambda c: c not in InvalidFilePathChars, name)
 
 FilenameFixer.instance = FilenameFixer()
+
 
 class SwitchFn:
     def __init__(self, mainfn, altfn=void_fn):
@@ -368,11 +391,13 @@ class SwitchFn:
         else:
             self.altfn(*args, **kw)
 
+
 class IncompleteLibraryError(Exception):
     pass
 
 # }}}
 # --------------------------------
+
 
 # --------------------------------
 #  Actions {{{
@@ -381,7 +406,7 @@ class Executor:
     def __init__(self):
         self._task_queue = queue.Queue()
         self.is_stopped = False
-        self.__lock = threading.RLock() # reentrant lock
+        self.__lock = threading.RLock()  # reentrant lock
 
     def start(self):
         with self.__lock:
@@ -399,8 +424,9 @@ class Executor:
             try:
                 return self._worker
             except AttributeError:
-                self._worker = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-                return  self._worker
+                self._worker = concurrent.futures.ThreadPoolExecutor(
+                    max_workers=1)
+                return self._worker
 
     def submit(self, f, *args, **kw):
         with self.__lock:
@@ -428,6 +454,7 @@ class DryExecutor(Executor):
 
 class ExecutorService(dict):
     DEFAULT_KEY = '_default'
+
     def __init__(self, klass=Executor):
         self.default_name = self.DEFAULT_KEY
         self[self.default_name] = klass()
@@ -441,6 +468,7 @@ class ExecutorService(dict):
     default = property(_get_default, _set_default)
 
 ExecutorService.root = ExecutorService()
+
 
 class WorkerMixin:
     def __new__(cls, *args, **kw):
@@ -462,9 +490,11 @@ class WorkerMixin:
     def _inject_executor(self, executor):
         self._executor = executor
 
+
 class Action:
     is_atomic = False
     is_dry = False
+
     def start(self, *args, dry=False, **kw):
         if self.is_dry or dry:
             self.dryrun(*args, **kw)
@@ -480,6 +510,7 @@ class Action:
     def on_complete(self):
         pass
 
+
 class Task(list, Action):
     def run(self):
         for action in self:
@@ -491,10 +522,12 @@ class Task(list, Action):
 
 CompositeAction = Task
 
+
 class TwoParamAction(Action):
     def __init__(self, src, dst):
         self.src = src
         self.dst = dst
+
 
 class FileCopyAction(TwoParamAction):
     def run(self):
@@ -503,12 +536,14 @@ class FileCopyAction(TwoParamAction):
     def __str__(self):
         return "COPY {0} -> {1}".format(self.src, self.dst)
 
+
 class FileMoveAction(TwoParamAction):
     def run(self):
         shutil.move(self.src, self.dst)
 
     def __str__(self):
         return "MOVE {0} -> {1}".format(self.src, self.dst)
+
 
 class FileRemoveAction(Action):
     def __init__(self, path):
@@ -522,6 +557,7 @@ class FileRemoveAction(Action):
 
 # }}}
 # --------------------------------
+
 
 # --------------------------------
 #  Library handlers {{{
@@ -580,15 +616,13 @@ class Library:
     def _create_track_factory(self, env):
         if env is None:
             env = EnvironmentBuilder.create()
-        def factory(track_dic):
-            return EnvTrackAdapter(Track(track_dic), env)
-        return factory
+        return (lambda track: EnvTrackAdapter(Track(track), env))
+
 
 class Track(NameAccessMixin, dict):
     @cached_property
     def filename(self):
         return fixfilename(self.name)
-
 
 
 class Playlist(NameAccessMixin, dict):
@@ -614,7 +648,8 @@ class Playlist(NameAccessMixin, dict):
                 track_id = track['Track ID']
                 yield self.lib.track(track_id)
             except KeyError:
-                warn(_i("Warning: Track ID {0} is not found in library").format(track_id))
+                warn(_i("Warning: Track ID {0} is not found in library")
+                     .format(track_id))
 
     @property
     def persistent_id(self):
@@ -632,6 +667,7 @@ class Playlist(NameAccessMixin, dict):
         return 'Distinguished Kind' in self or self.name in SYSTEM_PLAYLISTS
 # }}}
 # --------------------------------
+
 
 # --------------------------------
 #  Environment Definitions {{{
@@ -651,9 +687,11 @@ class EnvironmentBuilder:
         builder = EnvironmentBuilder()
         return builder.environment()
 
+
 class Environment:
     is_win = False
     is_mac = False
+
     def homedir(self):
         return os.environ['HOME']
 
@@ -670,22 +708,27 @@ class Environment:
         quoted_path = urllib.request.urlparse(url).path
         return urllib.request.unquote(quoted_path)
 
+
 class MacOSX(Environment):
     is_mac = True
+
     def devicedirs(self):
         return glob.glob("/Volumes/*")
 
+
 class Windows(Environment):
     is_win = True
+
     def homedir(self):
         return os.environ['HOMEPATH']
 
     def url_to_path(self, path):
-        return super().url_to_path(path)[1:] # Remove first /(slash)
+        return super().url_to_path(path)[1:]  # Remove first /(slash)
 
     def devicedirs(self):
         for charcode in range(ord('D'), ord('Z') + 1):
             yield chr(charcode) + ":"
+
 
 class EnvTrackAdapter:
     def __init__(self, track, env):
@@ -697,7 +740,9 @@ class EnvTrackAdapter:
         try:
             url = self.location
         except KeyError:
-            raise IncompleteLibraryError(_i("Location of Track {} is not recorded on Library file.").format(self.name))
+            raise IncompleteLibraryError(
+                _i("Location of Track {} is not recorded on Library file.")
+                .format(self.name))
         return self.env.url_to_path(self.location)
 
     @cached_property
@@ -712,7 +757,10 @@ class EnvTrackAdapter:
         return getattr(self.track, key)
 
     def __str__(self):
-        return "TrackAdapter<Track:{}, Env:{}>".format(self.track.name, type(self.env).__name__) # }}} # --------------------------------
+        return "TrackAdapter<Track:{}, Env:{}>"\
+            .format(self.track.name, type(self.env).__name__)
+# }}} # --------------------------------
+
 
 # --------------------------------
 #  Device Definitions {{{
@@ -735,9 +783,9 @@ class Walkman(Device):
 
     def __str__(self):
         return 'Walkman at {0}'.format(self.root_dir)
-
 # }}}
 # --------------------------------
+
 
 # --------------------------------
 #  Sync executors {{{
@@ -746,15 +794,18 @@ class DeviceLocator:
     def __init__(self, env):
         self.env = env
 
-    def devices(self): # -> list<Device>
-        return [ Walkman ]
+    def devices(self):  # -> list<Device>
+        return [Walkman]
 
-    def suitables(self, dev_dir): # -> iter<Device>
-        return (dev(dev_dir) for dev in self.devices() if dev.is_suitable(dev_dir))
+    def suitables(self, dev_dir):  # -> iter<Device>
+        return (
+            dev(dev_dir) for dev in self.devices()
+            if dev.is_suitable(dev_dir))
 
-    def find_all(self): # -> iter<Devices>
+    def find_all(self):  # -> iter<Devices>
         for dev_dir in self.env.devicedirs():
             yield from self.suitables(dev_dir)
+
 
 class ActualFile(WorkerMixin):
     def __init__(self, path):
@@ -777,19 +828,22 @@ class ActualFile(WorkerMixin):
                 track.date_modified > self.last_modified:
             self.copy_track(track)
 
+
 class VoidFile(VoidObject):
     pass
 
 
 class SyncDirectory(WorkerMixin):
     RE_PAT = re.compile(r'\d+\s(.+)\.({})'.format(MUSICFILE_EXTENSIONS))
-    def __init__(self, path, expected_files_count, force_write=False, dryrun=False):
+
+    def __init__(self, path, expected_files_count,
+                 force_write=False, dryrun=False):
         self.path = path
         self.files_map = self.collect_files()
         self.force_write = force_write
         self.index_digits = int(math.log10(expected_files_count)) + 1
 
-    def collect_files(self): # -> dict<str, str>
+    def collect_files(self):  # -> dict<str, str>
         if not os.path.isdir(self.path):
             os.makedirs(self.path)
         fs = {}
@@ -808,7 +862,8 @@ class SyncDirectory(WorkerMixin):
                 self.copy_new(track, pos)
         except IncompleteLibraryError as ex:
             error(ex)
-            error(_i('We could not sync {} because it has incomplete information').format(track.name))
+            error(_i('We could not sync {} because it has incomplete \
+                     information').format(track.name))
 
     def actual_name(self, track, pos):
         index = str(pos).zfill(self.index_digits)
@@ -841,6 +896,7 @@ class SyncDirectory(WorkerMixin):
     def create_actual_file(self, path):
         return ActualFile(path)
 
+
 class LibrarySyncer(WorkerMixin):
     def __init__(self, library, config, device):
         self.library = library
@@ -858,7 +914,7 @@ class LibrarySyncer(WorkerMixin):
             syncer.sync()
         self._executor.start()
 
-    def targetdir(self, playlist): # -> SyncDirectory
+    def targetdir(self, playlist):  # -> SyncDirectory
         dirpath = self.device.playlist_dirpath(playlist)
         return SyncDirectory(dirpath, len(playlist.tracks))
 
@@ -866,7 +922,7 @@ class LibrarySyncer(WorkerMixin):
     def target_playlists(self):
         return list(self.prepare_playlists())
 
-    def prepare_playlists(self): # -> iter<Playlist>
+    def prepare_playlists(self):  # -> iter<Playlist>
         for pname, is_active in self.config.target_playlists.items():
             if not is_active:
                 continue
@@ -883,10 +939,12 @@ class LibrarySyncer(WorkerMixin):
 
     start = sync
 
+
 class DryLibrarySyncer(LibrarySyncer):
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self._inject_executor(DryExecutor())
+
 
 class PlaylistSyncer(WorkerMixin):
     def __init__(self, playlist, dst_dir):
@@ -898,7 +956,7 @@ class PlaylistSyncer(WorkerMixin):
         tracks = self.playlist.tracks
         for index, track in zipwithindex(tracks, start=1):
             artist = track.get('artist', _i('<No artist>'))
-            title  = track.get('name', _i('<No Title>'))
+            title = track.get('name', _i('<No Title>'))
             info(_i("Syncing {}/{}").format(artist, title))
             self.targetdir.update_track_at(track, index)
 
@@ -910,4 +968,3 @@ if __name__ == '__main__':
     m = Main()
     m.config.inject(dry=True)
     m.start()
-
