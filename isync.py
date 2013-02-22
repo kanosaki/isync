@@ -441,7 +441,19 @@ class Executor:
                 self.worker.shutdown()
                 del self._worker
                 self.is_stopped = True
+
     shutdown = stop
+
+
+class ExecutorSuspender:
+    def __init__(self, executor):
+        self.executor = executor
+
+    def __enter__(self):
+        self.executor.stop()
+
+    def __exit__(self, ext_type, ext_val, ext_tb):
+        self.executor.start()
 
 
 class DryExecutor(Executor):
@@ -507,8 +519,16 @@ class Action:
         if print_into:
             debug(str(self))
 
+    def run(self):
+        pass
+
     def on_complete(self):
         pass
+
+class VoidAction(Action):
+    instance = Action()
+    def __new__(cls):
+        return VoidAction.instance
 
 
 class Task(list, Action):
@@ -531,6 +551,7 @@ class TwoParamAction(Action):
 
 class FileCopyAction(TwoParamAction):
     def run(self):
+        info(_i("Copying {} -> {}").format(self.src, self.dst))
         shutil.copy(self.src, self.dst)
 
     def __str__(self):
@@ -539,6 +560,7 @@ class FileCopyAction(TwoParamAction):
 
 class FileMoveAction(TwoParamAction):
     def run(self):
+        info(_i("Moving {} -> {}").format(self.src, self.dst))
         shutil.move(self.src, self.dst)
 
     def __str__(self):
@@ -550,6 +572,7 @@ class FileRemoveAction(Action):
         self.path = path
 
     def run(self):
+        info(_i("Removing {}").format(self.path))
         shutil.rmtree(self.path)
 
     def __str__(self):
@@ -827,11 +850,71 @@ class ActualFile(WorkerMixin):
         if not os.path.exists(self.path) or\
                 track.date_modified > self.last_modified:
             self.copy_track(track)
+            return WillBeCopied(track, self.path)
+        else:
+            return NothingToDo(track)
 
 
 class VoidFile(VoidObject):
     pass
 
+
+# -----------------------------------
+# SyncPlan
+# -----------------------------------
+class SyncPlan:
+    pass
+
+
+class WillBeRenamed(SyncPlan):
+    def __init__(self, track, oldpath, newpath):
+        self.track = track
+        self.oldpath = oldpath
+        self.newpath = newpath
+
+    def __str__(self):
+        return _i("Track '{}' will be moved from {} to {}")\
+                .format(self.track.name, self.oldpath, self.newpath)
+
+
+class WillBeCopied(SyncPlan):
+    def __init__(self, track, path):
+        self.track = track
+        self.path = path
+
+    def __str__(self):
+        return _i("Track '{}' will be copied from {} to {}")\
+                .format(self.track.name, self.track.path, self.path)
+
+
+class WillBeDeleted(SyncPlan):
+    def __init__(self, path):
+        self.path = path
+
+    def __str__(self):
+        return _i("File {} will be removed.")\
+                .format(self.path)
+
+
+class NothingToDo(SyncPlan):
+    def __init__(self, track):
+        self.track = track
+
+    def __str__(self):
+        return _i("Track '{}' has nothing to do.")\
+                .format(self.track.name)
+
+
+class AnErrorOccurrd(SyncPlan):
+    def __init__(self, track, ex):
+        self.track = track
+        self.exception = ex
+
+    def __str__(self):
+        return _i("An error occurred during syncing {}: {}")\
+                .format(self.track.name, self.exception)
+
+# -----------------------------------
 
 class SyncDirectory(WorkerMixin):
     RE_PAT = re.compile(r'\d+\s(.+)\.({})'.format(MUSICFILE_EXTENSIONS))
@@ -854,16 +937,30 @@ class SyncDirectory(WorkerMixin):
         debug('SyncDirectory {}: {}'.format(self.path, fs))
         return fs
 
+    def prune_tracks(self, tracks):  # generator of SyncPlan
+        fm = {}  # Track.filename -> Track
+        for track in tracks:
+            fm[track.filename] = track
+        for track_name, file_name in self.files_map.items():
+            if track_name not in fm:
+                yield self.remove_track(file_name)
+
+    def remove_track(self, filename):
+        fpath = os.path.join(self.path, filename)
+        self.submit(FileRemoveAction(fpath))
+        return WillBeDeleted(fpath)
+
     def update_track_at(self, track, pos):
         try:
             if track.filename in self.files_map:
-                self.update_filename(track, pos)
+                return self.update_filename(track, pos)
             else:
-                self.copy_new(track, pos)
+                return self.copy_new(track, pos)
         except IncompleteLibraryError as ex:
             error(ex)
             error(_i('We could not sync {} because it has incomplete \
                      information').format(track.name))
+            return AnErrorOccurrd(track, ex)
 
     def actual_name(self, track, pos):
         index = str(pos).zfill(self.index_digits)
@@ -879,6 +976,9 @@ class SyncDirectory(WorkerMixin):
         oldname = self.files_map[track.filename]
         if newname != oldname:
             self.move_file(oldname, newname)
+            return WillBeRenamed(track, oldname, newname)
+        else:
+            return NothingToDo(track)
 
     def move_file(self, oldname, newname):
         oldpath = os.path.join(self.path, oldname)
@@ -891,10 +991,19 @@ class SyncDirectory(WorkerMixin):
     def copy_new(self, track, pos):
         path = self.actual_path(track, pos)
         actual_file = ActualFile(path)
-        actual_file.update_track(track)
+        return actual_file.update_track(track)
 
     def create_actual_file(self, path):
         return ActualFile(path)
+
+
+class SyncerManager(WorkerMixin):
+    def __init__(self, libsyncer):
+        self.libsyncer = libsyncer
+
+    def start(self):
+        with ExecutorSuspender(self._executor):
+            libsyncaction = self.libsyncer.sync(print_plan=False)
 
 
 class LibrarySyncer(WorkerMixin):
@@ -904,15 +1013,16 @@ class LibrarySyncer(WorkerMixin):
         self.device = device
 
     def sync(self, print_plan=True):
-        if print_plan:
-            self.print_plan()
+        with ExecutorSuspender(self._executor):
+            playlist_actions = self._sync_playlists()  # Eager evaluation
+            if print_plan:
+                self.print_plan(playlist_actions)
 
-        self._executor.stop()
+    def _sync_playlists(self):
         for playlist in self.target_playlists:
             dst_dir = self.targetdir(playlist)
             syncer = PlaylistSyncer(playlist, dst_dir)
-            syncer.sync()
-        self._executor.start()
+            yield from syncer.sync()
 
     def targetdir(self, playlist):  # -> SyncDirectory
         dirpath = self.device.playlist_dirpath(playlist)
@@ -931,13 +1041,15 @@ class LibrarySyncer(WorkerMixin):
             except KeyError:
                 warn(_i("Playlist {} was not found in library").format(pname))
 
-    def print_plan(self, output=info):
-        output(_i("LibrarySyncer at {}").format(self.library.path))
+    def print_plan(self, actions, output=info):
         output(_i("Following playlists will be synced"))
         for index, playlist in zipwithindex(self.target_playlists, start=1):
             output("{}: {}".format(index, playlist.name))
+        for action in actions:
+            output(action)
 
     start = sync
+
 
 
 class DryLibrarySyncer(LibrarySyncer):
@@ -954,11 +1066,12 @@ class PlaylistSyncer(WorkerMixin):
 
     def sync(self):
         tracks = self.playlist.tracks
+        yield from self.targetdir.prune_tracks(tracks)
         for index, track in zipwithindex(tracks, start=1):
             artist = track.get('artist', _i('<No artist>'))
             title = track.get('name', _i('<No Title>'))
             info(_i("Syncing {}/{}").format(artist, title))
-            self.targetdir.update_track_at(track, index)
+            yield self.targetdir.update_track_at(track, index)
 
 
 # }}}
@@ -966,5 +1079,5 @@ class PlaylistSyncer(WorkerMixin):
 
 if __name__ == '__main__':
     m = Main()
-    m.config.inject(dry=True)
+    #m.config.inject(dry=True)
     m.start()
