@@ -150,8 +150,27 @@ class TestCommandArguments:
         ok_('verbose' in opts)
         ok_('logging' not in opts)
 
+class EventHolder:
+    on_foobar = isync.event()
+    def fire(self, arg):
+        self.on_foobar(arg)
 
+class TestEvent:
+    def setup(self):
+        self.last_arg = None
 
+    def test_event(self):
+        target = EventHolder()
+        target.on_foobar += self.handler_mock
+        assert_equals(None, self.last_arg)
+        target.fire(10)
+        assert_equals(10, self.last_arg)
+        target.on_foobar -= self.handler_mock  # unsubscribe
+        target.fire(20)
+        assert_equals(10, self.last_arg) # not called
+
+    def handler_mock(self, arg):
+        self.last_arg = arg
 
 
 

@@ -503,15 +503,63 @@ class WorkerMixin:
         self._executor = executor
 
 
+def event(*args, **kw):
+    return EventProvider(*args, **kw)
+
+
+class EventProvider:
+    def __init__(self, doc=None):
+        self.__doc__ = doc
+        self._objects = {}
+
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self
+        try:
+            return self._objects[obj]
+        except KeyError:
+            handler = self._objects[obj] = Event(self, obj)
+            return handler
+
+    def __set__(self, obj, value):
+        pass
+
+
+class Event:
+    def __init__(self, provider, target):
+        self._provider = provider
+        self._target = target
+        self.handlers = []
+        self.__handlers_lock = threading.RLock()
+
+    def fire(self, *args, **kw):
+        with self.__handlers_lock:
+            for h in self.handlers:
+                h(*args, **kw)
+
+    def subscribe(self, f):
+        with self.__handlers_lock:
+            self.handlers.append(f)
+
+    def unsubscribe(self, f):
+        with self.__handlers_lock:
+            self.handlers.remove(f)
+
+    __call__ = fire
+    __iadd__ = subscribe
+    __isub__ = unsubscribe
+
 class Action:
     is_atomic = False
     is_dry = False
+    on_completed = event()
 
     def start(self, *args, dry=False, **kw):
         if self.is_dry or dry:
             self.dryrun(*args, **kw)
         else:
             self.run(*args, **kw)
+        self.on_completed(*args, **kw)
 
     __call__ = start
 
@@ -522,8 +570,6 @@ class Action:
     def run(self):
         pass
 
-    def on_complete(self):
-        pass
 
 class VoidAction(Action):
     instance = Action()
