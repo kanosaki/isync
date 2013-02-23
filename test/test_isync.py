@@ -6,6 +6,7 @@ import os
 import shutil
 import sys
 import io
+import logging
 
 pjoin = os.path.join
 APPROOT = os.path.abspath(pjoin(os.path.dirname(__file__), '../'))
@@ -69,6 +70,7 @@ class TestWindows:
         assert_equals(list(win.devicedirs())[-1:], ['Z:'])
 
 class DummyPlaylists:
+    logging_level = logging.DEBUG
     @property
     def target_playlists(self):
         return { 'A Playlist' : True }

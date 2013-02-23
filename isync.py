@@ -139,7 +139,9 @@ class Main:
         info(_i("Reading configurations..."))
         try:
             path = self.args.config
-            return Config.load(self.args, path)
+            cfg = Config.load(self.args, path)
+            cfg.logging_level = self._logging_level # set logging level
+            return cfg
         except Exception as e:
             warn(e)
             warn(_i("Unable to read configuration, creating new one."))
@@ -175,6 +177,7 @@ class Main:
         if 'logging' in self.args:
             lvl = getattr(logging, self.args.logging.upper())
         logging.basicConfig(level=lvl, format=fmt)
+        self._logging_level = lvl
 
 
 # DO NOT use logging functions
@@ -225,6 +228,7 @@ class Config:
         self._dic = dic
         self._path = path
         self._args = args
+        self.logging_level = logging.INFO
 
     def __getattr__(self, key):
         return self._args.get(key) or self._dic[key]
@@ -909,7 +913,7 @@ class VoidFile(VoidObject):
 # SyncPlan
 # -----------------------------------
 class SyncPlan:
-    pass
+    importance = logging.INFO
 
 
 class WillBeRenamed(SyncPlan):
@@ -943,6 +947,8 @@ class WillBeDeleted(SyncPlan):
 
 
 class NothingToDo(SyncPlan):
+    importance = logging.DEBUG
+
     def __init__(self, track):
         self.track = track
 
@@ -952,6 +958,8 @@ class NothingToDo(SyncPlan):
 
 
 class AnErrorOccurrd(SyncPlan):
+    importance = logging.ERROR
+
     def __init__(self, track, ex):
         self.track = track
         self.exception = ex
@@ -980,7 +988,6 @@ class SyncDirectory(WorkerMixin):
             match = self.RE_PAT.match(fname)
             if match:
                 fs[match.group(1)] = fname
-        debug('SyncDirectory {}: {}'.format(self.path, fs))
         return fs
 
     def prune_tracks(self, tracks):  # generator of SyncPlan
@@ -1091,8 +1098,10 @@ class LibrarySyncer(WorkerMixin):
         output(_i("Following playlists will be synced"))
         for index, playlist in zipwithindex(self.target_playlists, start=1):
             output("{}: {}".format(index, playlist.name))
+        logging_level = self.config.logging_level
         for action in actions:
-            output(action)
+            if action.importance > logging_level:
+                output(action)
 
     start = sync
 
@@ -1116,7 +1125,6 @@ class PlaylistSyncer(WorkerMixin):
         for index, track in zipwithindex(tracks, start=1):
             artist = track.get('artist', _i('<No artist>'))
             title = track.get('name', _i('<No Title>'))
-            info(_i("Syncing {}/{}").format(artist, title))
             yield self.targetdir.update_track_at(track, index)
 
 
