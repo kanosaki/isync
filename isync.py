@@ -78,6 +78,7 @@ import queue
 import inspect
 import argparse
 import threading
+import unicodedata
 from logging import error, warn, info, debug
 
 # Version check
@@ -987,7 +988,9 @@ class SyncDirectory(WorkerMixin):
         for fname in os.listdir(self.path):
             match = self.RE_PAT.match(fname)
             if match:
-                fs[match.group(1)] = fname
+                trackname = match.group(1)
+                normalized = unicodedata.normalize('NFC', trackname)
+                fs[normalized] = unicodedata.normalize('NFC', fname)
         return fs
 
     def prune_tracks(self, tracks):  # generator of SyncPlan
