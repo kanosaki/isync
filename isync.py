@@ -623,7 +623,7 @@ class FileRemoveAction(Action):
 
     def run(self):
         info(_i("Removing {}").format(self.path))
-        shutil.rmtree(self.path)
+        os.remove(self.path)
 
     def __str__(self):
         return "REMOVE {0}".format(self.src, self.dst)
