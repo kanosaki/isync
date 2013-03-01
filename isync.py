@@ -358,7 +358,18 @@ class NameAccessMixin:
             return default
 
     def _convert_name(self, name):
-        return ' '.join(list(map(str.capitalize, name.split('_'))))
+        try:
+            return NameAccessMixin.__name_mem[name]
+        except KeyError:
+            if name.startswith('is_'):
+                name = name[3:]  # remove 'is_'
+            converted_name = \
+                    NameAccessMixin.__name_mem[name] = \
+                    ' '.join(list(map(str.capitalize, name.split('_'))))
+            return converted_name
+        except AttributeError:
+            NameAccessMixin.__name_mem = {}
+            return self._convert_name(name)
 
 
 def fixfilename(name):
@@ -705,6 +716,9 @@ class Track(NameAccessMixin, dict):
     def filename(self):
         return fixfilename(self.name)
 
+    def __str__(self):
+        return "{}/{}".format(self.name, self.artist)
+
 
 class Playlist(NameAccessMixin, dict):
     def __init__(self, lib, dic):
@@ -810,21 +824,77 @@ class Windows(Environment):
         for charcode in range(ord('D'), ord('Z') + 1):
             yield chr(charcode) + ":"
 
+class TrackFinder:
+    def __init__(self, track, env):
+        self.track = track
+        self.env = env
+
+    def find_artistdir(self):
+        candidate = os.path.join(
+            self.env.itunes_dir(),
+            'iTunes Media',
+            'Music',
+            self.track.artist_dirname)
+        if os.path.isdir(candidate):
+            return candidate
+
+    def find_albumdir(self, artistdir):
+        candidate = os.path.join(
+            artistdir,
+            self.track.album_dirname)
+        if os.path.isdir(candidate):
+            return candidate
+
+    def find_track(self, albumdir):
+        for fname in os.listdir(albumdir):
+            fpath = os.path.join(albumdir, fname)
+            af = ActualFile(fpath)
+            if af.track_name == self.track.filename:
+                return fpath
+
+    def find(self):
+        artistdir = self.find_artistdir()
+        if artistdir is not None:
+            albumdir = self.find_albumdir(artistdir)
+            if albumdir is not None:
+                return self.find_track(albumdir)
+
 
 class EnvTrackAdapter:
     def __init__(self, track, env):
         self.track = track
         self.env = env
 
+    @property
+    def artist_dirname(self):
+        if self.track.get('compilation', False):
+            return 'Compilations'
+        else:
+            return fixfilename(self.artist)
+
+    @property
+    def album_dirname(self):
+        return fixfilename(self.album)
+
     @cached_property
     def path(self):
         try:
             url = self.location
+            path = self.env.url_to_path(self.location)
+            return path
         except KeyError:
-            raise IncompleteLibraryError(
-                _i("Location of Track {} is not recorded on Library file.")
-                .format(self.name))
-        return self.env.url_to_path(self.location)
+            finder = TrackFinder(self, self.env)
+            guessed_path = finder.find()
+            if guessed_path is not None:
+                warn(_i("Track path of {} was not recorded \
+                        at iTunes library but I guess {}\
+                        is a correct file.").format(self.track, guessed_path))
+                return guessed_path
+            else:
+                raise IncompleteLibraryError(
+                    _i("Location of Track {} is not recorded on Library file.")
+                    .format(self.name))
+
 
     @cached_property
     def _stat(self):
@@ -934,6 +1004,23 @@ class ActualFile(WorkerMixin):
             return WillBeCopied(track, self.path)
         else:
             return NothingToDo(track)
+
+    @cached_property
+    def _matched(self):
+        filename = os.path.basename(self.path)
+        return self.RE_FILENAME.match(filename)
+
+    @property
+    def track_number(self):
+        return int(self._matched.group(1))
+
+    @property
+    def track_name(self):
+        return self._matched.group(2)
+
+    @property
+    def extension(self):
+        return self._matched.group(3)
 
 
 class VoidFile(VoidObject):
