@@ -151,10 +151,11 @@ class Main:
     @cached_property
     def device(self):
         info(_i("Searching device..."))
-        devices = list(DeviceLocator(self.env).find_all())
+        devices = list(DeviceLocator(self.env, self.config).find_all())
         if len(devices) < 1:
-            abort(_i("No suitable device found."))
-        elif len(devices) > 1:
+            self.abort(_i("No suitable device found."))
+        elif len(devices) > 1 and\
+            len(list(dev for dev in devices if not dev.is_fallback)) > 1:
             warn(_i("Multi suitable devices found.  I will use {0} for \
                     syncing.").format(devices[0]))
         return devices[0]
@@ -197,6 +198,8 @@ class CommandArguments:
         parser.add_argument('-v', '--verbose', action='store_true',
                             help=_i('Verbose output. \
                                     Set logging level to DEBUG'))
+        parser.add_argument('-t', '--target', metavar='DIR',
+                            nargs='?', help='Sync target directory')
         parser.add_argument('--logging',
                             nargs='?', choices=['ERROR',
                                                 'WARN',
@@ -342,6 +345,10 @@ class NameAccessMixin:
             return getattr(super(), name)
         ename = self._convert_name(name)
         return self[ename]
+
+    def __hasattr__(self, key):
+        ename = self._convert_name(key)
+        return ename in self
 
     def get(self, key, default=None):
         ename = self._convert_name(key)
@@ -840,8 +847,7 @@ class EnvTrackAdapter:
 #  Device Definitions {{{
 # --------------------------------
 class Device:
-    pass
-
+    is_fallback = False
 
 class Walkman(Device):
     def __init__(self, device_dir):
@@ -857,6 +863,23 @@ class Walkman(Device):
 
     def __str__(self):
         return 'Walkman at {0}'.format(self.root_dir)
+
+
+class SyncTargetDir(Device):
+    is_fallback = True
+    def __init__(self, root_dir):
+        self.root_dir = root_dir
+
+    @staticmethod
+    def is_suitable(path):
+        return os.path.isdir(path)
+
+    def playlist_dirpath(self, playlist):
+        return os.path.join(self.root_dir, playlist.filename)
+
+    def __str__(self):
+        return 'SyncTargetDir at {}'.format(self.root_dir)
+
 # }}}
 # --------------------------------
 
@@ -865,23 +888,30 @@ class Walkman(Device):
 #  Sync executors {{{
 # --------------------------------
 class DeviceLocator:
-    def __init__(self, env):
+    def __init__(self, env, cfg):
         self.env = env
+        self.config = cfg
 
     def devices(self):  # -> list<Device>
-        return [Walkman]
+        return [Walkman, SyncTargetDir]
 
     def suitables(self, dev_dir):  # -> iter<Device>
         return (
             dev(dev_dir) for dev in self.devices()
             if dev.is_suitable(dev_dir))
 
+    def _device_candidates(self):
+        if 'target' in self.config:
+            yield self.config.target
+        yield from self.env.devicedirs()
+
     def find_all(self):  # -> iter<Devices>
-        for dev_dir in self.env.devicedirs():
+        for dev_dir in self._device_candidates():
             yield from self.suitables(dev_dir)
 
 
 class ActualFile(WorkerMixin):
+    RE_FILENAME = re.compile(r'(\d+)\s(.+)\.({})'.format('|'.join(MUSICFILE_EXTENSIONS)))
     def __init__(self, path):
         """path: indexed file path"""
         self.path = path

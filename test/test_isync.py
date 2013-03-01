@@ -174,5 +174,11 @@ class TestEvent:
     def handler_mock(self, arg):
         self.last_arg = arg
 
+class TestActualFile:
+    def test_filenameparse(self):
+        af = isync.ActualFile('/Foobar/012 HogeHoge.mp3')
+        assert_equals(12, af.track_number)
+        assert_equals('HogeHoge', af.track_name)
+        assert_equals('mp3', af.extension)
 
 
