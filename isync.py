@@ -165,7 +165,7 @@ class Main:
             return Library(self.env.itunes_libfile())
         except Exception as e:
             error(e)
-            abort(_i("No iTunes library found."))
+            self.abort(_i("No iTunes library found."))
 
     # DO NOT refer any attributes except 'args' to make sense of
     # logging.basicConfig
@@ -179,6 +179,10 @@ class Main:
             lvl = getattr(logging, self.args.logging.upper())
         logging.basicConfig(level=lvl, format=fmt)
         self._logging_level = lvl
+
+    def abort(self, msg):
+        print(*args, file=sys.stderr)
+        sys.exit(-1)
 
 
 # DO NOT use logging functions
@@ -301,10 +305,6 @@ def id_fn(x):
 def void_fn(*args, **kw):
     pass
 
-
-def abort(*args):
-    print(*args, file=sys.stderr)
-    sys.exit(-1)
 
 
 def zipwithindex(iterable, start=0):
