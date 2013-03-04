@@ -911,7 +911,8 @@ class EnvTrackAdapter:
                 return self._findfile_missing()
         except KeyError: # Location has not been recorded on iTunes Library
             return self._findfile_fallback()
-        except Exception:
+        except Exception as e:
+            error(e)
             return None # Fixme: Return any other value
 
 

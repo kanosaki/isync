@@ -60,7 +60,13 @@ class TestLibrary:
         tr = lib.track(1368)
         assert_equals(tr.name, 'TuneAlpha')
         assert_equals(tr.album_artist, 'AlbumArtistBravo')
+
+        if not os.path.exists(TUNESDIR):
+            os.mkdir(TUNESDIR)
+        touch(os.path.join(TUNESDIR), 'TuneAlpha.mp3')
         assert_equals(tr.path, os.path.join(TUNESDIR, 'TuneAlpha.mp3'))
+        shutil.rmtree(os.path.join(TUNESDIR), 'TuneAlpha.mp3')
+
 
 
 class TestWindows:
