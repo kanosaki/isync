@@ -56,7 +56,7 @@ else:
 APP_DESCRIPTION = _i('A simple synchronizer between iTunes and Walkman')
 DEFAULT_CONFIG_FILENAME = 'iSyncConfig.json'
 SYSTEM_PLAYLISTS = set(['Libaray', 'ライブラリ'])
-DEBUG_MODE = True
+DEBUG_MODE = False
 MUSICFILE_EXTENSIONS = ['mp3', 'm4a', 'm4p']
 
 # Import list
@@ -173,7 +173,7 @@ class Main:
     def _init_logger(self):
         lvl = logging.INFO
         fmt = '%(levelname)-5s %(message)s'
-        if ('verbose' in self.args) or DEBUG_MODE:
+        if ('verbose' in self.args and self.args.verbose) or DEBUG_MODE:
             lvl = logging.DEBUG
             fmt = '%(asctime)-15s %(levelname)-5s %(message)s'
         if 'logging' in self.args:
