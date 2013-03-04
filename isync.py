@@ -846,9 +846,7 @@ class TrackFinder:
             return candidate
 
     def find_track(self, albumdir):
-        for fname in os.listdir(albumdir):
-            fpath = os.path.join(albumdir, fname)
-            af = ActualFile(fpath)
+        for af in ActualFile.glob(albumdir):
             if af.track_name == self.track.filename:
                 return af
 
@@ -986,6 +984,11 @@ class ActualFile(WorkerMixin):
         """path: indexed file path"""
         self.path = unicodedata.normalize('NFC', path)
 
+    @staticmethod
+    def glob(dirpath):
+        return (ActualFile(os.path.join(dirpath, fname))
+                for fname in os.listdir(dirpath))
+
     @cached_property
     def _stat(self):
         return os.stat(self.path)
@@ -1105,12 +1108,8 @@ class SyncDirectory(WorkerMixin):
         if not os.path.isdir(self.path):
             os.makedirs(self.path)
         fs = {}
-        for fname in os.listdir(self.path):
-            match = self.RE_PAT.match(fname)
-            if match:
-                trackname = match.group(1)
-                normalized = unicodedata.normalize('NFC', trackname)
-                fs[normalized] = unicodedata.normalize('NFC', fname)
+        for af in ActualFile.glob(self.path):
+            fs[af.track_name] = af.path
         return fs
 
     def prune_tracks(self, tracks):  # generator of SyncPlan
