@@ -158,6 +158,7 @@ class Main:
             len(list(dev for dev in devices if not dev.is_fallback)) > 1:
             warn(_i("Multi suitable devices found.  I will use {0} for \
                     syncing.").format(devices[0]))
+        info(_i("I will use {} for syncing").format(devices[0].root_dir))
         return devices[0]
 
     @cached_property
@@ -181,7 +182,7 @@ class Main:
         logging.basicConfig(level=lvl, format=fmt)
         self._logging_level = lvl
 
-    def abort(self, msg):
+    def abort(self, *args):
         print(*args, file=sys.stderr)
         sys.exit(-1)
 
@@ -961,7 +962,7 @@ class DeviceLocator:
         self.config = cfg
 
     def devices(self):  # -> list<Device>
-        return [Walkman, SyncTargetDir]
+        return [Walkman]
 
     def suitables(self, dev_dir):  # -> iter<Device>
         return (
@@ -969,13 +970,13 @@ class DeviceLocator:
             if dev.is_suitable(dev_dir))
 
     def _device_candidates(self):
-        if 'target' in self.config:
-            yield self.config.target
         yield from self.env.devicedirs()
 
     def find_all(self):  # -> iter<Devices>
         for dev_dir in self._device_candidates():
             yield from self.suitables(dev_dir)
+        if 'target' in self.config:
+            yield SyncTargetDir(self.config.target)
 
 
 class ActualFile(WorkerMixin):
