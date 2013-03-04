@@ -850,7 +850,7 @@ class TrackFinder:
             fpath = os.path.join(albumdir, fname)
             af = ActualFile(fpath)
             if af.track_name == self.track.filename:
-                return fpath
+                return af
 
     def find(self):
         artistdir = self.find_artistdir()
@@ -884,12 +884,12 @@ class EnvTrackAdapter:
             return path
         except KeyError:
             finder = TrackFinder(self, self.env)
-            guessed_path = finder.find()
-            if guessed_path is not None:
+            guessed_file = finder.find()
+            if guessed_file is not None:
                 warn(_i("Track path of {} was not recorded \
                         at iTunes library but I guess {}\
-                        is a correct file.").format(self.track, guessed_path))
-                return guessed_path
+                        is a correct file.").format(self.track, guessed_file.path))
+                return guessed_file.path
             else:
                 raise IncompleteLibraryError(
                     _i("Location of Track {} is not recorded on Library file.")
@@ -984,7 +984,7 @@ class ActualFile(WorkerMixin):
     RE_FILENAME = re.compile(r'(\d+)\s(.+)\.({})'.format('|'.join(MUSICFILE_EXTENSIONS)))
     def __init__(self, path):
         """path: indexed file path"""
-        self.path = path
+        self.path = unicodedata.normalize('NFC', path)
 
     @cached_property
     def _stat(self):
@@ -1006,9 +1006,12 @@ class ActualFile(WorkerMixin):
             return NothingToDo(track)
 
     @cached_property
+    def filename(self):
+        return os.path.basename(self.path)
+
+    @cached_property
     def _matched(self):
-        filename = os.path.basename(self.path)
-        return self.RE_FILENAME.match(filename)
+        return self.RE_FILENAME.match(self.filename)
 
     @property
     def track_number(self):
