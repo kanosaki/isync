@@ -57,7 +57,7 @@ APP_DESCRIPTION = _i('A simple synchronizer between iTunes and Walkman')
 DEFAULT_CONFIG_FILENAME = 'iSyncConfig.json'
 SYSTEM_PLAYLISTS = set(['Libaray', 'ライブラリ'])
 DEBUG_MODE = True
-MUSICFILE_EXTENSIONS = ['mp3', 'm4a']
+MUSICFILE_EXTENSIONS = ['mp3', 'm4a', 'm4p']
 
 # Import list
 import plistlib
@@ -86,7 +86,6 @@ if sys.version < '3.3':
     raise _i('Python 3.3 or above required.')
 
 FILEDIR = os.path.abspath(os.path.dirname(__file__))
-
 
 # Utility functions
 def cached_property(f):
@@ -875,24 +874,45 @@ class EnvTrackAdapter:
     def album_dirname(self):
         return fixfilename(self.album)
 
+    def _findfile_missing(self):
+        finder = TrackFinder(self, self.env)
+        guessed_file = finder.find()
+        if guessed_file is not None:
+            warn(_i("Track path of {} was recorded \
+                    at iTunes library but musicfile is not found at \
+                    the path, so I guess {} is a correct file.")\
+                 .format(self.track, guessed_file.path))
+            return guessed_file.path
+        else:
+            raise IncompleteLibraryError(
+                _i("Invalid location of Track {} was recorded on Library file.")
+                .format(self.name))
+
+    def _findfile_fallback(self):
+        finder = TrackFinder(self, self.env)
+        guessed_file = finder.find()
+        if guessed_file is not None:
+            warn(_i("Track path of {} was not recorded \
+                    at iTunes library but I guess {}\
+                    is a correct file.").format(self.track, guessed_file.path))
+            return guessed_file.path
+        else:
+            raise IncompleteLibraryError(
+                _i("Location of Track {} is not recorded on Library file.")
+                .format(self.name))
+
     @cached_property
     def path(self):
         try:
-            url = self.location
             path = self.env.url_to_path(self.location)
-            return path
-        except KeyError:
-            finder = TrackFinder(self, self.env)
-            guessed_file = finder.find()
-            if guessed_file is not None:
-                warn(_i("Track path of {} was not recorded \
-                        at iTunes library but I guess {}\
-                        is a correct file.").format(self.track, guessed_file.path))
-                return guessed_file.path
+            if os.path.isfile(path):
+                return path
             else:
-                raise IncompleteLibraryError(
-                    _i("Location of Track {} is not recorded on Library file.")
-                    .format(self.name))
+                return self._findfile_missing()
+        except KeyError: # Location has not been recorded on iTunes Library
+            return self._findfile_fallback()
+        except Exception:
+            return None # Fixme: Return any other value
 
 
     @cached_property
@@ -1110,21 +1130,20 @@ class SyncDirectory(WorkerMixin):
             os.makedirs(self.path)
         fs = {}
         for af in ActualFile.glob(self.path):
-            fs[af.track_name] = af.path
+            fs[af.track_name] = af
         return fs
 
     def prune_tracks(self, tracks):  # generator of SyncPlan
         fm = {}  # Track.filename -> Track
         for track in tracks:
             fm[track.filename] = track
-        for track_name, file_name in self.files_map.items():
+        for track_name, af in self.files_map.items():
             if track_name not in fm:
-                yield self.remove_track(file_name)
+                yield self.remove_track(af.path)
 
-    def remove_track(self, filename):
-        fpath = os.path.join(self.path, filename)
-        self.submit(FileRemoveAction(fpath))
-        return WillBeDeleted(fpath)
+    def remove_track(self, path):
+        self.submit(FileRemoveAction(path))
+        return WillBeDeleted(path)
 
     def update_track_at(self, track, pos):
         try:
@@ -1140,6 +1159,8 @@ class SyncDirectory(WorkerMixin):
 
     def actual_name(self, track, pos):
         index = str(pos).zfill(self.index_digits)
+        if track.path is None:
+            raise IncompleteLibraryError()
         _, extension = os.path.splitext(track.path)
         return '{0} {1}{2}'.format(index, track.filename, extension)
 
@@ -1149,7 +1170,7 @@ class SyncDirectory(WorkerMixin):
 
     def update_filename(self, track, pos):
         newname = self.actual_name(track, pos)
-        oldname = self.files_map[track.filename]
+        oldname = self.files_map[track.filename].filename
         if newname != oldname:
             self.move_file(oldname, newname)
             return WillBeRenamed(track, oldname, newname)
