@@ -6,6 +6,7 @@ import os
 import shutil
 import sys
 import io
+import logging
 
 pjoin = os.path.join
 APPROOT = os.path.abspath(pjoin(os.path.dirname(__file__), '../'))
@@ -59,7 +60,13 @@ class TestLibrary:
         tr = lib.track(1368)
         assert_equals(tr.name, 'TuneAlpha')
         assert_equals(tr.album_artist, 'AlbumArtistBravo')
+
+        if not os.path.exists(TUNESDIR):
+            os.mkdir(TUNESDIR)
+        touch(os.path.join(TUNESDIR), 'TuneAlpha.mp3')
         assert_equals(tr.path, os.path.join(TUNESDIR, 'TuneAlpha.mp3'))
+        shutil.rmtree(os.path.join(TUNESDIR), 'TuneAlpha.mp3')
+
 
 
 class TestWindows:
@@ -69,6 +76,7 @@ class TestWindows:
         assert_equals(list(win.devicedirs())[-1:], ['Z:'])
 
 class DummyPlaylists:
+    logging_level = logging.DEBUG
     @property
     def target_playlists(self):
         return { 'A Playlist' : True }
@@ -87,7 +95,7 @@ class TestLibrarySyncer:
         dev = isync.Walkman(DEVICEDIR)
         cfg = DummyPlaylists()
         syncer = isync.LibrarySyncer(lib, cfg, dev)
-        syncer.sync(print_plan=False)
+        syncer.sync()
         syncer.shutdown()
         assert_file_exists(DEVICEDIR, 'MUSIC', 'A Playlist', '1 TuneDelta.mp3')
 
@@ -97,14 +105,15 @@ class TestLibrarySyncer:
         cfg1 = DummyPlaylists()
         syncer1 = isync.LibrarySyncer(lib1, cfg1, dev1)
         syncer1._inject_executor(ImmediateExecutor())
-        syncer1.sync(print_plan=False)
+        syncer1.sync()
         syncer1.shutdown()
+        touch(TUNESDIR, '2 SomeTune.mp3', body='DummyFile SomeTune')
         lib2 = isync.Library(create_library('testlib2.xml'))
         dev2 = isync.Walkman(DEVICEDIR)
         cfg2 = DummyPlaylists()
         syncer2 = isync.LibrarySyncer(lib2, cfg2, dev2)
         syncer2._inject_executor(ImmediateExecutor())
-        syncer2.sync(print_plan=False)
+        syncer2.sync()
         assert_file_exists(DEVICEDIR, 'MUSIC', 'A Playlist', '1 TuneAlpha.mp3')
         assert_file_exists(DEVICEDIR, 'MUSIC', 'A Playlist', '2 TuneDelta.mp3')
 
@@ -149,8 +158,33 @@ class TestCommandArguments:
         ok_('verbose' in opts)
         ok_('logging' not in opts)
 
+class EventHolder:
+    on_foobar = isync.event()
+    def fire(self, arg):
+        self.on_foobar(arg)
 
+class TestEvent:
+    def setup(self):
+        self.last_arg = None
 
+    def test_event(self):
+        target = EventHolder()
+        target.on_foobar += self.handler_mock
+        assert_equals(None, self.last_arg)
+        target.fire(10)
+        assert_equals(10, self.last_arg)
+        target.on_foobar -= self.handler_mock  # unsubscribe
+        target.fire(20)
+        assert_equals(10, self.last_arg) # not called
 
+    def handler_mock(self, arg):
+        self.last_arg = arg
+
+class TestActualFile:
+    def test_filenameparse(self):
+        af = isync.ActualFile('/Foobar/012 HogeHoge.mp3')
+        assert_equals(12, af.track_number)
+        assert_equals('HogeHoge', af.track_name)
+        assert_equals('mp3', af.extension)
 
 

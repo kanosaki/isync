@@ -9,10 +9,16 @@ LANG_FILE_EXT = '.json'
 INITIAL_STRING = '=============='
 def extract(file)
   result = {}
+  carry_over = ""
   file.each_line do |line|
-    if PATTERN =~ line 
+    if line.end_with?("\\\n")
+      carry_over += line.gsub("\\\n", "")
+      next
+    end
+    if PATTERN =~ (carry_over + line)
       result[$1] = INITIAL_STRING
     end
+    carry_over = ""
   end
   result
 end
