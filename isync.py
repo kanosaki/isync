@@ -17,10 +17,13 @@ language_strings = {
         "Unable to read configuration, creating new one.": "設定ファイルを読み込めませんでした。新規に作成し続行します。",
         "Searching device...": "デバイスを探しています・・・",
         "No suitable device found.": "対応しているデバイスが見つかりませんでした",
+        "Multi suitable devices found.  I will use {0} for syncing.": "複数の対応するデバイスが見つかりました。{0}を使用します。",
         "I will use {} for syncing": "{} を同期します",
         "No iTunes library found.": "iTuensライブラリが見つかりませんでした",
         "Path to config file": "設定ファイルへのパス",
         "Dry-run mode.": "Dry-runモード",
+        "Verbose output. Set logging level to DEBUG": "詳細出力モード。loggingのレベルをDEBUGへ設定します",
+        "Set logging level, default is WARN, overwrites \"-v\" option": "loggingのレベルを設定します。デフォルトはWARNです。これを設定すると\"-v\"オプションによるloggingの設定を上書きします",
         "<Path to iTunes Libaray.xml>": "<iTunes ライブラリへのパス>",
         "<Playlist Name>": "<プレイリスト名>",
         "Copying {} -> {}": "コピー中 {} -> {}",
@@ -29,13 +32,16 @@ language_strings = {
         "This library created by stream": "ストリームから作成されたライブラリでは実行できません。",
         "Warning: Track ID {0} is not found in library": "警告: トラックID{0}はデータベースから見つかりませんでした。データベースが破損しています",
         " is not supported.": "はサポートされていません",
+        "Track path of {} was recorded at iTunes library but musicfile is not found at the path, so I guess {} is a correct file.": "トラック {} の場所はiTunes Libraryに記録されていましたが、その場所にファイルはありませんでした。 それらしいファイル{}を発見したので、それを同期します",
         "Invalid location of Track {} was recorded on Library file.": "iTunesライブラリ上の {} のファイルパスが存在しない場所を指しています",
-        "Location of Track {} is not recorded on Library file.": "トラック{}の場所がライブラリに記録されていませんでした",
+        "Track path of {} was not recorded at iTunes library but I guess {} is a correct file.": "トラック {} の場所はiTunes Libraryに記録されていませんでした。 それらしいファイル{}を発見したので、それを同期します",
+        "Location of Track {} is not recorded on Library file.": "トラック {} の場所はiTunes Libraryに記録されていませんでした。",
         "Track '{}' will be moved from {} to {}": "トラック {} は {} から {} へ移動されます",
         "Track '{}' will be copied from {} to {}": "トラック {} は {} から {} へコピーされます",
         "File {} will be removed.": "トラック {} は削除されます",
         "Track '{}' has nothing to do.": "トラック {} は変更されません",
         "An error occurred during syncing {}: {}": "{} を同期中にエラーが発生しました: {}",
+        "We could not sync {} because it has incomplete information": "ライブラリが不完全なため、{} を同期できませんでした",
         "Playlist {} was not found in library": "設定ファイルに誤りがあります。プレイリスト「{}」はライブラリ中に存在しません。",
         "Following playlists will be synced": "以下のプレイリストが同期されます",
         "<No artist>": "<アーティスト無し>",
@@ -167,7 +173,7 @@ class Main:
         elif len(devices) > 1 and\
             len(list(dev for dev in devices if not dev.is_fallback)) > 1:
             warn(_i("Multi suitable devices found.  I will use {0} for \
-                    syncing.").format(devices[0]))
+syncing.").format(devices[0]))
         info(_i("I will use {} for syncing").format(devices[0].root_dir))
         return devices[0]
 
@@ -208,7 +214,7 @@ class CommandArguments:
                             help=_i('Dry-run mode.'))
         parser.add_argument('-v', '--verbose', action='store_true',
                             help=_i('Verbose output. \
-                                    Set logging level to DEBUG'))
+Set logging level to DEBUG'))
         parser.add_argument('-t', '--target', metavar='DIR',
                             nargs='?', help='Sync target directory')
         parser.add_argument('--logging',
@@ -217,7 +223,7 @@ class CommandArguments:
                                                 'INFO',
                                                 'DEBUG'],
                             help=_i('Set logging level, \
-                                    default is WARN, overwrites "-v" option'))
+default is WARN, overwrites "-v" option'))
         self._opts = parser.parse_args(args)
 
     def __contains__(self, key):
@@ -890,8 +896,8 @@ class EnvTrackAdapter:
         guessed_file = finder.find()
         if guessed_file is not None:
             warn(_i("Track path of {} was recorded \
-                    at iTunes library but musicfile is not found at \
-                    the path, so I guess {} is a correct file.")\
+at iTunes library but musicfile is not found at \
+the path, so I guess {} is a correct file.")\
                  .format(self.track, guessed_file.path))
             return guessed_file.path
         else:
@@ -904,8 +910,8 @@ class EnvTrackAdapter:
         guessed_file = finder.find()
         if guessed_file is not None:
             warn(_i("Track path of {} was not recorded \
-                    at iTunes library but I guess {}\
-                    is a correct file.").format(self.track, guessed_file.path))
+at iTunes library but I guess {} \
+is a correct file.").format(self.track, guessed_file.path))
             return guessed_file.path
         else:
             raise IncompleteLibraryError(
@@ -1166,7 +1172,7 @@ class SyncDirectory(WorkerMixin):
         except IncompleteLibraryError as ex:
             error(ex)
             error(_i('We could not sync {} because it has incomplete \
-                     information').format(track.name))
+information').format(track.name))
             return AnErrorOccurrd(track, ex)
 
     def actual_name(self, track, pos):
