@@ -128,9 +128,21 @@ class Main:
         self._init_logger()
 
     def start(self):
-        self.sync()
+        self.execute()
         if self.env.is_win:
             input()  # pause console for cmd.exe
+
+    def execute(self):
+        try:
+            # Check config file
+            self.config
+            self.sync()
+        except FileNotFoundError as e:
+            Config.prepare_default(self.library)
+            warn(_i("Unable to read configuration, creating new one."))
+            warn(_i("Please edit {0} and re-exec this app.")\
+                 .format(self.args.config or DEFAULT_CONFIG_FILENAME))
+
 
     def create_syncer(self):
         if self.config.is_dry:
@@ -161,8 +173,7 @@ class Main:
             return cfg
         except Exception as e:
             warn(e)
-            warn(_i("Unable to read configuration, creating new one."))
-            return Config.prepare_default(self.library)
+            raise e
 
     @cached_property
     def device(self):
@@ -296,7 +307,6 @@ class Config:
         if library is not None:
             cfg._inject_libaray(library)
         cfg.save()
-        return cfg
 
     def __str__(self):
         return 'Config({})'.format(str(self._dic))
