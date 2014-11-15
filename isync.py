@@ -604,10 +604,14 @@ class TwoParamAction(Action):
         self.src = src
         self.dst = dst
 
+    @property
+    def short_repr(self):
+        return os.path.basename(self.src)
+
 
 class FileCopyAction(TwoParamAction):
     def run(self):
-        info(_i("Copying {} -> {}").format(self.src, self.dst))
+        info(_i("Copying {}".format(self.short_repr)))
         shutil.copy(self.src, self.dst)
 
     def __str__(self):
@@ -616,7 +620,7 @@ class FileCopyAction(TwoParamAction):
 
 class FileMoveAction(TwoParamAction):
     def run(self):
-        info(_i("Moving {} -> {}").format(self.src, self.dst))
+        info(_i("Moving {}".format(self.short_repr)))
         shutil.move(self.src, self.dst)
 
     def __str__(self):
@@ -628,7 +632,7 @@ class FileRemoveAction(Action):
         self.path = path
 
     def run(self):
-        info(_i("Removing {}").format(self.path))
+        info(_i("Removing {}".format(self.short_repr)))
         os.remove(self.path)
 
     def __str__(self):
