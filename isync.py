@@ -404,7 +404,7 @@ def fixfilename(name):
     return FilenameFixer.instance.filter(name)
 
 
-InvalidFilePathChars = set(list(iter('"<>|:*?\\/'))
+InvalidFilePathChars = set(list(iter('!"<>|:*?\\/'))
                            + list(map(chr, range(0, 31))))
 
 
