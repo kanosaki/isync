@@ -780,11 +780,14 @@ class Environment:
     def itunes_dir(self):
         return os.path.join(self.homedir(), 'Music', 'iTunes')
 
-    def itunes_libfilename(self):
-        return 'iTunes Library.xml'
+    def itunes_libfilenames(self):
+        return ['iTunes Music Library.xml', 'iTunes Library.xml']
 
     def itunes_libfile(self):
-        return os.path.join(self.itunes_dir(), self.itunes_libfilename())
+        for itunes_lib in self.itunes_libfilenames():
+            path = os.path.join(self.itunes_dir(), itunes_lib)
+            if os.path.exists(path):
+                return path
 
     def url_to_path(self, url):
         quoted_path = urllib.request.urlparse(url).path
