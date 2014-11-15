@@ -9,48 +9,7 @@
 import locale
 # Set POSIX locale variables.
 locale_key, encoding_name = locale.getlocale()
-language_strings = {
-    'ja_JP': {
-        "A simple synchronizer between iTunes and Walkman": "ちょっとしたiTunesとWalkman同期ソフト",
-        "Python 3.3 or above required.": "Python 3.3以上をインストールして下さい。",
-        "Reading configurations...": "設定を読み込んでいます・・・・",
-        "Unable to read configuration, creating new one.": "設定ファイルを読み込めませんでした。新規に作成します。",
-        "Please edit {0} and re-exec this app.": "{0}を編集してプログラムを再実行して下さい",
-        "Searching device...": "デバイスを探しています・・・",
-        "No suitable device found.": "対応しているデバイスが見つかりませんでした",
-        "Multi suitable devices found.  I will use {0} for syncing.": "複数の対応するデバイスが見つかりました。{0}を使用します。",
-        "I will use {} for syncing": "{} を同期します",
-        "No iTunes library found.": "iTuensライブラリが見つかりませんでした",
-        "Path to config file": "設定ファイルへのパス",
-        "Dry-run mode.": "Dry-runモード",
-        "Verbose output. Set logging level to DEBUG": "詳細出力モード。loggingのレベルをDEBUGへ設定します",
-        "Set logging level, default is WARN, overwrites \"-v\" option": "loggingのレベルを設定します。デフォルトはWARNです。これを設定すると\"-v\"オプションによるloggingの設定を上書きします",
-        "<Path to iTunes Libaray.xml>": "<iTunes ライブラリへのパス>",
-        "<Playlist Name>": "<プレイリスト名>",
-        "Copying {} -> {}": "コピー中 {} -> {}",
-        "Moving {} -> {}": "移動中 {} -> {}",
-        "Removing {}": "削除中 {}",
-        "This library created by stream": "ストリームから作成されたライブラリでは実行できません。",
-        "Warning: Track ID {0} is not found in library": "警告: トラックID{0}はデータベースから見つかりませんでした。データベースが破損しています",
-        " is not supported.": "はサポートされていません",
-        "Track path of {} was recorded at iTunes library but musicfile is not found at the path, so I guess {} is a correct file.": "トラック {} の場所はiTunes Libraryに記録されていましたが、その場所にファイルはありませんでした。 それらしいファイル{}を発見したので、それを同期します",
-        "Invalid location of Track {} was recorded on Library file.": "iTunesライブラリ上の {} のファイルパスが存在しない場所を指しています",
-        "Track path of {} was not recorded at iTunes library but I guess {} is a correct file.": "トラック {} の場所はiTunes Libraryに記録されていませんでした。 それらしいファイル{}を発見したので、それを同期します",
-        "Location of Track {} is not recorded on Library file.": "トラック {} の場所はiTunes Libraryに記録されていませんでした。",
-        "Track '{}' will be moved from {} to {}": "トラック {} は {} から {} へ移動されます",
-        "Track '{}' will be copied from {} to {}": "トラック {} は {} から {} へコピーされます",
-        "File {} will be removed.": "トラック {} は削除されます",
-        "Track '{}' has nothing to do.": "トラック {} は変更されません",
-        "An error occurred during syncing {}: {}": "{} を同期中にエラーが発生しました: {}",
-        "We could not sync {} because it has incomplete information": "ライブラリが不完全なため、{} を同期できませんでした",
-        "Playlist {} was not found in library": "設定ファイルに誤りがあります。プレイリスト「{}」はライブラリ中に存在しません。",
-        "Following playlists will be synced": "以下のプレイリストが同期されます",
-        "<No artist>": "<アーティスト無し>",
-        "<No Title>": "<タイトル無し>",
-        "Multi suitable devices found. I will use {0} for syncing.": "複数の使用可能デバイスが見つかりました、{0}を使用します",
-        "Locaiton of Track {} is not recorded on Library file.": "{}のパスがライブラリ中に記録されていませんでした"
-    }
-}
+language_strings = {}
 if locale_key in language_strings:
     current_locale = language_strings[locale_key]
 
